@@ -135,8 +135,8 @@ typedef struct
 } ADC_map;
 #define ADC1 ((ADC_map *) ADC1_REGS)
 #define ADC2 ((ADC_map *) ADC2_REGS)
-
-
+#define ADC3 ((ADC_map *) ADC3_REGS)
+#define ADC4 ((ADC_map *) ADC4_REGS)
 
 typedef struct
 {
@@ -146,6 +146,7 @@ typedef struct
     volatile uint32_t   CDR;
 } ADC_common_map;
 #define ADC1_2_COMMON ((ADC_common_map *) ADC1_2_COMMON_REGS)
+#define ADC3_4_COMMON ((ADC_common_map *) ADC3_4_COMMON_REGS)
 
 typedef struct
 {
@@ -181,5 +182,7 @@ typedef struct
     volatile uint32_t    CFGR3;      //0x30
 } RCC_map;
 #define RCC ((RCC_map *) RCC_REGS)
+
+
 
 #endif

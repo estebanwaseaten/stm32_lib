@@ -6,4 +6,4 @@ MEMORY
 
 _estack = 0x20002000;
 
-INCLUDE ../STM32_lib/sections.ld
+INCLUDE ../stm32_lib/sections.ld
