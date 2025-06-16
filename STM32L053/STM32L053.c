@@ -13,6 +13,35 @@ void STMtest( void )
 //    ADC_disable( 0 );       //stops program???
 }
 
+/************** CLOCK functions
+ *
+ *
+ */
+void CLOCK_init( void )     //enables all clocks...
+{
+    // HSI16 internal high speed clock setup
+    RCC->CR &= ~(1U << 4 );      //do not divide the HSI16 output by /4
+
+    // Turn on HSI16 (high speed internal)
+    RCC->CR |= 1;
+    while (!CHKBIT( RCC->CR, 2 ));     //this seems to work
+
+    //enable HSE (high speed external)
+    //RCC->CR |= (1U << 16);
+    //while (!CHKBIT( RCC->CR, 17 ));
+
+    // PLL clock multiplicator 16MHz x 2 = 32 MHz;
+    RCC->CFGR |= (1U << 22 );    //set PLL output divider to /2
+    RCC->CFGR |= (1U << 18 );    //set PLL output multiplicator to x4
+    RCC->CFGR &= ~(1U << 16 );   //unset PLL source to use HSI16
+
+    //Turn on PLL
+    RCC->CR |= (1U << 24);
+    while (!CHKBIT( RCC->CR, 25 ));     //this seems to work
+
+    //switch to PLL as system clock
+    RCC->CFGR |= (3U << 0 );    //---> blinks very fast now
+}
 
 
 /************** GPIO functions
@@ -65,34 +94,22 @@ int ADC_enable( uint32_t num )
     RCC->APB2ENR |= (1U << 9);
 
     //maybe first check if ADC clock is running?
-    while( !CHKBIT(RCC->APB2ENR, 9) )
-    {
-        __asm("nop"); //wait for calibration to end
-    }
+    while( !CHKBIT(RCC->APB2ENR, 9) );
+
 
     //enable voltage regulator if not on (should not be necessary, because turns on when calibration is started):
-    if( !CHKBIT( ADC->CR, 28 ) )
-    {
-        ADC->CR = (1U << 28);
-    }
-    setWord( 0x20001900, ADC->CR );     //this seems to be working
+    //if( !CHKBIT( ADC->CR, 28 ) )
+    //{
+    //    ADC->CR = (1U << 28);
+    //}
+    //setWord( 0x20001900, ADC->CR );     //this seems to be working
 
-    
+
     //2. start calibration
     ADC->CR = (1U << 31);    //start calibration
-    int counter = 0;
-    while( (ADC->CR >> 31) )
-    {
-        //THIS LOOP NEVER STOPS
-        setWord( 0x20001900, ADC->CR );
-        setWord( 0x20001910, ADC->CFGR1 );
-        setWord( 0x20001920, ADC->ISR );
-        setWord( 0x20001930, ADC->DR );
-        __asm("nop"); //wait for calibration to end
-        counter++;
-        setWord( 0x20001950, counter );
-    }
-    counter++;
+    while( (ADC->CR >> 31) );
+
+
     __asm("nop");
     __asm("nop");
     setWord( 0x20001900, ADC->CALFACT );
