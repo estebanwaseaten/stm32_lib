@@ -80,10 +80,10 @@
     #define ADC4_REGS           0x50000500
     #define ADC3_4_COMMON_REGS   0x50000700
 
-
 //cortex M4 internal peripherals
 #define CORTEX_BASE 0xE0000000
 
+// ******************** ADC
 typedef struct
 {
     volatile uint32_t   ISR;    //0x00

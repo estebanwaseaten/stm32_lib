@@ -22,15 +22,15 @@ void setWord( uint32_t addr, uint32_t word );
 void STMtest( void );
 
 //GPIO
-void GPIOinit( void );
-void GPIOchangeFunction( uint32_t pin, uint32_t function );
-void GPIOset( uint32_t pin );
-void GPIOunset( uint32_t pin );
-uint32_t GPIOget( uint32_t pin );
+void GPIO_init( void );
+void GPIO_changeFunction( uint32_t pin, uint32_t function );
+void GPIO_set( uint32_t pin );
+void GPIO_unset( uint32_t pin );
+uint32_t GPIO_get( uint32_t pin );
 
 //ADC
 int ADC_enable( uint32_t num );
-
+int ADC_disable( uint32_t num );
 
 
 

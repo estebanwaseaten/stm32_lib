@@ -4,7 +4,7 @@
 void STMtest( void )
 {
     RCC->CR |= (1 << 16);   //turn on HSE
-    RCC->CFGR |= (1 << 0);  // HSE clock as main clck
+    RCC->CFGR |= (1 << 0);  // HSE CLOCK_inck as main clck
 
     RCC->APB1ENR |= (1 << 29);  //enable DAC1 interface clock
     RCC->APB1ENR |= (1 << 26);  //enable DAC2 interface clock
@@ -23,34 +23,39 @@ void STMtest( void )
     //read with sudo ./cheesecake -stmbinprint 0x20000210
 }
 
-void GPIOinit( void )
+
+
+/************** GPIO functions
+ *
+ *
+ */
+void GPIO_init( void )
 {
     RCC->AHBENR |= 0x00060000;
     __asm("nop");			//execute on cycle or so (do nothing)
 }
 
-void GPIOchangeFunction( uint32_t pin, uint32_t function )
+void GPIO_changeFunction( uint32_t pin, uint32_t function )
 {
     //set mode for PIN to output:
     SETBITS( GPIOA->MODER, 0x1, pin*2 );
 }
 
-
-
-void GPIOset( uint32_t pin )
+void GPIO_set( uint32_t pin )
 {
     GPIOA->BSRR = ( 1 << pin );
 }
 
-void GPIOunset( uint32_t pin )
+void GPIO_unset( uint32_t pin )
 {
     GPIOA->BSRR = ( 1 << ( pin + 16 ) );
 }
 
-uint32_t GPIOget( uint32_t pin )
+uint32_t GPIO_get( uint32_t pin )
 {
     return 0;
 }
+
 
 /************** ADC functions
  *
@@ -101,5 +106,36 @@ int ADC_enable( uint32_t num )
         default:
             return -1;
     }
+    return 0;
+}
+
+int ADC_disable( uint32_t num )
+{
+    //turn off ADC voltage regulator:
+    switch ( num )
+    {
+        case 1:
+            ADC1->CR &= 0xCFFFFFFF; //reset
+            ADC1->CR = (1 << 29);   //disable
+            break;
+        case 2:
+            ADC2->CR &= 0xCFFFFFFF; //reset
+            ADC2->CR = (1 << 29);   //disable
+            break;
+        case 3:
+            ADC3->CR &= 0xCFFFFFFF; //reset
+            ADC3->CR = (1 << 29);   //disable
+            break;
+        case 4:
+            ADC4->CR &= 0xCFFFFFFF; //reset
+            ADC4->CR = (1 << 29);   //disable
+            break;
+        default:
+            return -1;
+    }
+
+    //disable ADC clock
+    RCC->APB2ENR &= ~(1U << 9);
+
     return 0;
 }
