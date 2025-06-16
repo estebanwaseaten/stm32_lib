@@ -12,6 +12,7 @@ void STMtest( void )
 
 
     ADC_enable( 1 );
+    ADC_enable( 3 );
 
     for (int i = 0; i < 100; i++) {
         __asm("nop");
@@ -19,16 +20,32 @@ void STMtest( void )
 
 
     //write clock control register to RAM for debugging reasons
-    setWord( 0x20000210, ADC1->CR );
+//    setWord( 0x20000210, ADC1->CR );
     //read with sudo ./cheesecake -stmbinprint 0x20000210
 }
 
 
 
+void CLOCK_init( void )
+{
+    uint32_t counter = 0;
+    setWord( 0x20006000, counter );
+
+    RCC->CR = 0x01050001;    //turn on PLL, HSE, HSI
+    while( !CHKBIT(RCC->CR, 25) || !CHKBIT(RCC->CR, 17) || !CHKBIT(RCC->CR, 1))
+    {   //wait until clocks are running
+        __asm("nop");
+    }
+
+
+    setWord( 0x20006000, counter );
+}
+
 /************** GPIO functions
  *
  *
  */
+
 void GPIO_init( void )
 {
     RCC->AHBENR |= 0x00060000;
@@ -63,6 +80,9 @@ uint32_t GPIO_get( uint32_t pin )
  */
 int ADC_enable( uint32_t num )
 {
+
+
+
     //enable ADC clock for both ADCs
     RCC->AHBENR |= 0x30000000;
     __asm("nop");			//execute four cycles before
@@ -74,10 +94,21 @@ int ADC_enable( uint32_t num )
     switch ( num )
     {
         case 1:
+            //set clock:
+            //ADC1_2_COMMON->CCR->
+
+
             if( !CHKBIT( ADC1->CR, 28 ) )
             {   //enable voltage regulator if not on.
-                ADC1->CR &= 0xCFFFFFFF; //reset
-                ADC1->CR = (1 << 28);   //enable
+                ADC1->CR &= 0x0;        //reset
+                ADC1->CR |= (1 << 28);   //enable voltage regulator
+                for (int i = 0; i < 100000; i++)    //wait at least 10 us
+                {
+                    __asm("nop");
+                }
+
+                //ADC1->CR &= ~(1 << 30);     //clear ADCALDIF --> single input
+                ADC1->CR = (1 << 31);      //start calibration     ALWAYS STUCK at 1
             }
             break;
         case 2:

@@ -181,7 +181,7 @@ typedef struct
     volatile uint32_t    CFGR2;      //0x2C
     volatile uint32_t    CFGR3;      //0x30
 } RCC_map;
-#define RCC ((RCC_map *) RCC_REGS)
+#define RCC ((volatile RCC_map *) RCC_REGS)
 
 
 

@@ -15,11 +15,14 @@ enum pin_functions
 #define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
 #define SETBIT( reg, bit ) ((reg) |= (1U << (bit)))
 #define CLRBIT( reg, bit ) ((reg) &= ~(1U << (bit)))
-#define CHKBIT( reg, bit ) (((reg) >> (bit)) & 1U)
+#define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
 
 //MISC
 void setWord( uint32_t addr, uint32_t word );
 void STMtest( void );
+
+//RCC (clock)
+void CLOCK_init( void );
 
 //GPIO
 void GPIO_init( void );
@@ -31,7 +34,6 @@ uint32_t GPIO_get( uint32_t pin );
 //ADC
 int ADC_enable( uint32_t num );
 int ADC_disable( uint32_t num );
-
 
 
 
