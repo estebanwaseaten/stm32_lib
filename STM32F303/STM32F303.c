@@ -1,6 +1,8 @@
 #include "../STM32.h"
 #include "STM32F303.h"
 
+//test
+
 void STMtest( void )
 {
     RCC->CR |= (1 << 16);   //turn on HSE
