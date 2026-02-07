@@ -11,10 +11,14 @@ enum pin_functions
     PIN_INPUT
 };
 
-#define SETWRD( reg, word ) ((reg) |= (word))
-#define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
 #define SETBIT( reg, bit ) ((reg) |= (1U << (bit)))
+#define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
+#define SETWRD( reg, word ) ((reg) |= (word))
+
 #define CLRBIT( reg, bit ) ((reg) &= ~(1U << (bit)))
+#define CLRBITS( reg, bits, shift ) ((reg) &= ~((bits) << (shift)))
+#define CLRWRD( reg ) ((reg) &= 0x0)
+
 #define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
 
 //MISC
@@ -35,6 +39,8 @@ uint32_t GPIO_get( uint32_t pin );
 int ADC_enable( uint32_t ADCnum );
 int ADC_disable( uint32_t ADCnum );
 
-
+//SPI
+int SPI_enable( uint32_t SPInum );
+int SPI_disable( uint32_t SPInum );
 
 #endif

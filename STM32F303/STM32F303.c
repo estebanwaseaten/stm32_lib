@@ -2,52 +2,113 @@
 #include "STM32F303.h"
 
 //test
-
-
-
 void STMtest( void )
 {
-    RCC->CR |= (1 << 16);   //turn on HSE
-    RCC->CFGR |= (1 << 0);  // HSE CLOCK_inck as main clck
+    setWord( 0x20009000, 0 );
+    setWord( 0x20009004, 0 );
+    setWord( 0x20009008, 0 );
+    setWord( 0x2000900C, 0 );
 
-    RCC->APB1ENR |= (1 << 29);  //enable DAC1 interface clock
-    RCC->APB1ENR |= (1 << 26);  //enable DAC2 interface clock
-
-
-
-    ADC_enable( 1 );
-    ADC_enable( 3 );
-
-    for (int i = 0; i < 100; i++) {
+    //turn on HSE
+    SETBIT( RCC->CR, 16 );           //turn on HSE
+    while( !CHKBIT(RCC->CR, 17) )   //check if it is on
+    {
         __asm("nop");
     }
 
+    //settings for ADC and PLL dividers
+    CLRWRD( RCC->CFGR2 );
+    SETBIT( RCC->CFGR2, 13 );       //ADC34 PLL clock divided by 1
+    SETBIT( RCC->CFGR2, 8 );        //ADC12 PLL clock divided by 1
+    CLRBITS( RCC->CFGR2, 0xF, 0);    //HSE input to PLL not divided
 
-    //write clock control register to RAM for debugging reasons
-//    setWord( 0x20000210, ADC1->CR );
-    //read with sudo ./cheesecake -stmbinprint 0x20000210
+    //settings for PLL mult and set PLL source
+    CLRWRD( RCC->CFGR );
+    SETBITS( RCC->CFGR, 0x7, 18 );    //set PLL mult to 0111 = x9 --> 72MHz
+    SETBIT( RCC->CFGR, 16 );          //set PLL src to HSE
+
+    //set HSE as sysclock (does not matter)
+    SETBIT( RCC->CFGR, 0 );           //set HSE as system clock
+    while( !CHKBIT(RCC->CFGR, 2) )    //check if HSE is selected as system clock
+    {
+        __asm("nop");
+    }
+
+    //turn on PLL
+    SETBIT( RCC->CR, 24 );           //turn on PLL
+    while( !CHKBIT(RCC->CR, 25) )    //check if it is on
+    {
+        __asm("nop");
+    }
+
+    //enable ADC clocks
+    SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
+    SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
+
+    __asm("nop");			//execute four cycles before
+    __asm("nop");
+    __asm("nop");
+    __asm("nop");
+
+    CLRWRD( ADC1_2_COMMON->CCR );
+
+    //enable ADC voltage regulator if not on.
+    if( !CHKBIT( ADC1->CR, 28 ) )
+    {
+        CLRBITS( ADC1->CR, 0x3, 28 );   //reset ADVREGEN[1:0] = 00
+        SETBIT( ADC1->CR, 28 );         //enable voltage regulator ADVREGEN[1:0] = 01
+        for (int i = 0; i < 100000; i++)    //wait at least 10 us (T_ADCVREG_STUP)
+        {
+            __asm("nop");
+        }
+    }
+
+    //enable ADC
+    SETBIT( ADC1->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;
+    while( !CHKBIT( ADC1->ISR, 0 ) )    //ISR register bit 0 is the ready flag
+    {
+        __asm("nop");
+    }
+
 }
+
 
 
 // initializes the clocks and waits until they are running
 void CLOCK_init( void )
 {
-    RCC->CR = 0x01050001;    //turn on PLL, HSE, HSI
-    while( !CHKBIT(RCC->CR, 25) || !CHKBIT(RCC->CR, 17) || !CHKBIT(RCC->CR, 1))
+    // LSE clock (low speed): X2
+    // HSI 8 MHz RC oscillator clock
+    // HSE oscillator clock (external high-speed clock, either X3 on nucleo, or MCO from ST-LINK:
+    //      MCO output of ST-LINK MCU is used as an input clock. This
+    //      frequency cannot be changed, it is fixed at 8 MHz and connected to PF0/PD0/PH0-OSC_IN of the STM32 microcontroller.
+    // PLL clock (either HSI or HSE can be used as source?)
+    // after power on only HSI should be anabled
+
+
+    //RCC->CR = 0x01050001;    //turn on PLL, HSE, HSI
+
+    SETBIT(RCC->CR, 16);     // turn on HSE    (needed for fast ADC)
+    while( !CHKBIT(RCC->CR, 17) )
     {   //wait until clocks are running
         __asm("nop");
     }
+
+    // 25: PLLRDY, 17: HSERDY, 1: HSIRDY
+/*    while( !CHKBIT(RCC->CR, 25) || !CHKBIT(RCC->CR, 17) || !CHKBIT(RCC->CR, 1))
+    {   //wait until clocks are running
+        __asm("nop");
+    }*/
 }
 
 /************** GPIO functions
  *
  *
  */
-
 void GPIO_init( void )
 {
     RCC->AHBENR |= 0x00060000;          // set GPIOAEN (port A clock enable and port B clock enable)
-    __asm("nop");			            //execute on cycle or so (do nothing)
+    __asm("nop");			            // execute one cycle (do nothing)
 }
 
 void GPIO_changeFunction( uint32_t pin, uint32_t function )
@@ -76,18 +137,16 @@ uint32_t GPIO_get( uint32_t pin )
  * 1. enable ADC internal voltage regulator (ADC voltage regulator enable sequence: a) change ADVREGEN[1:0] from 10 to 00 b) change from 00 to 01 )
  * 2. wait 10us for startup time
  * single ended vs differential:  DIFSEL[15:1]
+ * AHB3 should be clocked
  */
+
 int ADC_enable( uint32_t ADCnum )
 {
-//    RCC->APB1ENR |= (1 << 29);  //enable DAC1 interface clock
-//    RCC->APB1ENR |= (1 << 26);  //enable DAC2 interface clock
-
-    RCC->APB1ENR |= (1 << 29);  //enable DAC1 interface clock
-    RCC->APB1ENR |= (1 << 26);  //enable DAC2 interface clock
 
 
     //enable ADC clock for both ADCs (bits 28 and 29 for ADC1/2 and ADC3/4) --> RCC clock up to 72MHz
-    RCC->AHBENR |= 0x30000000;
+    SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
+    SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
     __asm("nop");			//execute four cycles before
     __asm("nop");
     __asm("nop");
@@ -98,7 +157,8 @@ int ADC_enable( uint32_t ADCnum )
     {
         case 1:
             //set/select clock:
-            ADC1_2_COMMON->CCR &= 0x30000;  //unset bits 17&16  //use specific clock source up tp 72MHz CKMODE[1:0] of the ADCx_CCR register must be reset.
+            //ADC1_2_COMMON->CCR &= 0x30000;  //unset bits 17&16  //use specific clock source up tp 72MHz CKMODE[1:0] of the ADCx_CCR register must be reset.
+            //want async --> bits 16 and 17 are 0
 
             // enable ADC internal voltage regulator & wait 10us
             if( !CHKBIT( ADC1->CR, 28 ) )
@@ -113,8 +173,9 @@ int ADC_enable( uint32_t ADCnum )
 
             // enable ADC: set ADC1->CR:ADEN = 1 and wait till ready
             ADC1->CR |= 1;      // ADC1->CR |= 2; to disable;
-            while( !CHKBIT( ADC1->ISR, 0 ) )
+            while( !CHKBIT( ADC1->ISR, 0 ) ) //ISR register bit 0 is the ready flag
             {
+                //break;
                 //not ready yet
                 __asm("nop");
             }
@@ -196,5 +257,23 @@ int ADC_disable( uint32_t ADCnum )
 
     //RCC->APB2ENR &= ~(1U << 9);
 
+    return 0;
+}
+
+/************** SPI functions
+ *
+ *
+ */
+
+int SPI_enable( uint32_t SPInum )
+{
+
+
+
+    return 0;
+}
+
+int SPI_disable( uint32_t SPInum )
+{
     return 0;
 }

@@ -72,10 +72,11 @@
     #define GPIOG_REGS  0x48001800
     #define GPIOH_REGS  0x48001C00
 
-#define AHB3_BASE 0x50000000
+#define AHB3_BASE 0x50000000                    //AHB3 0x5000 0000 - 0x5000 07FF
     #define ADC1_REGS           0x50000000
     #define ADC2_REGS           0x50000100
     #define ADC1_2_COMMON_REGS   0x50000300
+
     #define ADC3_REGS           0x50000400
     #define ADC4_REGS           0x50000500
     #define ADC3_4_COMMON_REGS   0x50000700
