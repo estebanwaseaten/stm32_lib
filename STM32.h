@@ -32,8 +32,8 @@ void GPIO_unset( uint32_t pin );
 uint32_t GPIO_get( uint32_t pin );
 
 //ADC
-int ADC_enable( uint32_t num );
-int ADC_disable( uint32_t num );
+int ADC_enable( uint32_t ADCnum );
+int ADC_disable( uint32_t ADCnum );
 
 
 

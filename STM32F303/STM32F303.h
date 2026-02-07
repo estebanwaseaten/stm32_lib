@@ -84,6 +84,10 @@
 #define CORTEX_BASE 0xE0000000
 
 // ******************** ADC
+// 4 ADSc with max. 19 channels each
+// mapped on AHB bus
+// 0.19us for 12bit, 0.16us for 10bit resolution
+// up to 5 fast analog input channels from GPIO
 typedef struct
 {
     volatile uint32_t   ISR;    //0x00
@@ -140,10 +144,10 @@ typedef struct
 
 typedef struct
 {
-    volatile uint32_t   CSR;
+    volatile uint32_t   CSR;        // ADC Common status register
     volatile uint32_t   res0;
-    volatile uint32_t   CCR;
-    volatile uint32_t   CDR;
+    volatile uint32_t   CCR;        // ADC common control register
+    volatile uint32_t   CDR;        // ADC common regular data register for dual mode
 } ADC_common_map;
 #define ADC1_2_COMMON ((ADC_common_map *) ADC1_2_COMMON_REGS)
 #define ADC3_4_COMMON ((ADC_common_map *) ADC3_4_COMMON_REGS)
@@ -165,21 +169,22 @@ typedef struct
 #define GPIOA ((GPIO_map *) GPIOA_REGS)
 #define GPIOB ((GPIO_map *) GPIOB_REGS)
 
+//RCC = reset and clock control
 typedef struct
 {
-    volatile uint32_t    CR;         //0x00
-    volatile uint32_t    CFGR;       //0x04
-    volatile uint32_t    CIR;        //0x08
-    volatile uint32_t    APB2RSTR;   //0x0C
-    volatile uint32_t    APB1RSTR;   //0x10
-    volatile uint32_t    AHBENR;     //0x14
-    volatile uint32_t    APB2ENR;    //0x18
-    volatile uint32_t    APB1ENR;    //0x1C
-    volatile uint32_t    BDCR;       //0x20
-    volatile uint32_t    CSR;        //0x24
-    volatile uint32_t    AHBRSTR;    //0x28
-    volatile uint32_t    CFGR2;      //0x2C
-    volatile uint32_t    CFGR3;      //0x30
+    volatile uint32_t    CR;         //0x00     Clock control register
+    volatile uint32_t    CFGR;       //0x04     Clock configuration register
+    volatile uint32_t    CIR;        //0x08     Clock interrupt register
+    volatile uint32_t    APB2RSTR;   //0x0C     APB2 peripheral reset registe
+    volatile uint32_t    APB1RSTR;   //0x10     APB1 peripheral reset registe
+    volatile uint32_t    AHBENR;     //0x14     AHB peripheral clock enable register
+    volatile uint32_t    APB2ENR;    //0x18     APB2 peripheral clock enable register (TIMERs, USART, SPI, SYSCFGEN)
+    volatile uint32_t    APB1ENR;    //0x1C     APB1 peripheral clock enable register (DAC, PWR, CAN, USB, I2C, UART, USART, SPI, WWD, TIMERs)
+    volatile uint32_t    BDCR;       //0x20     RTC domain control register
+    volatile uint32_t    CSR;        //0x24     Control/status register
+    volatile uint32_t    AHBRSTR;    //0x28     AHB peripheral reset registe
+    volatile uint32_t    CFGR2;      //0x2C     Clock configuration register 2  (contains ADC prescalers)
+    volatile uint32_t    CFGR3;      //0x30     Clock configuration register 3
 } RCC_map;
 #define RCC ((volatile RCC_map *) RCC_REGS)
 
