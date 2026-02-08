@@ -376,6 +376,11 @@ int SPI_enable( uint32_t SPInum )
     return 0;
 }
 
+void SPI_receive()
+{
+
+}
+
 //test
 void SPI_test( void )
 {
@@ -390,8 +395,10 @@ void SPI_test( void )
 
 
         while( !CHKBIT( SPI1->SR, 1 )){}    //wait until transmit buffer is empty
-        *(uint8_t *)&SPI1->DR = 0xAA;
-        *(uint8_t *)&SPI1->DR = 0xAA;
+        //*(uint8_t *)&SPI1->DR = 0xAA;
+        *(uint8_t *)&SPI1->DR = 0xF0;
+        *(uint8_t *)&SPI1->DR = 0x0F;
+    //    *(uint8_t *)&SPI1->DR = 0xAA;
     //    *(uint8_t *)&SPI1->DR = 0xAA;
     //    *(uint8_t *)&SPI1->DR = 0xAA;
         // here FIFO is  full
@@ -400,14 +407,11 @@ void SPI_test( void )
         setWord( 0x20009004, SPI1->SR);
 
 
-        while( !CHKBIT( SPI1->SR, 0 ))
-        {
-            setWord( 0x20009004, SPI1->SR);
-        }     //wait until receive buffer is not empty
+        while( !CHKBIT( SPI1->SR, 0 )){}     //wait until receive buffer is not empty
         uint8_t received = *(uint8_t *)&SPI1->DR;
 
-        setWord( 0x20009008, counter + 1);
 
+        setWord( 0x20009008, counter + 1);
         setWord( 0x20009000, (uint32_t)received );
 
         for( int i = 0; i < 100; i++ )
