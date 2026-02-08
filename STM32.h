@@ -22,7 +22,11 @@ enum pin_functions
 #define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
 
 //MISC
+uint32_t getWord( uint32_t addr );
 void setWord( uint32_t addr, uint32_t word );
+void waitCycles( uint32_t cycles );
+
+
 void STMtest( void );
 
 //RCC (clock)
@@ -36,11 +40,14 @@ void GPIO_unset( uint32_t pin );
 uint32_t GPIO_get( uint32_t pin );
 
 //ADC
+void ADC_init( void );
 int ADC_enable( uint32_t ADCnum );
 int ADC_disable( uint32_t ADCnum );
 
 //SPI
+void SPI_init( void );
 int SPI_enable( uint32_t SPInum );
 int SPI_disable( uint32_t SPInum );
+void SPI_test( void );
 
 #endif

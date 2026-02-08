@@ -190,5 +190,24 @@ typedef struct
 #define RCC ((volatile RCC_map *) RCC_REGS)
 
 
+typedef struct
+{
+    volatile uint32_t   CR1;        //
+    volatile uint32_t   CR2;        //
+    volatile uint32_t   SR;         //
+    volatile uint32_t   DR;         //
+
+    volatile uint32_t   CRCPR;       //
+    volatile uint32_t   RXCRCR;      //
+    volatile uint32_t   TXCRCR;      //
+    volatile uint32_t   I2SCFGR;     //
+    volatile uint32_t   I2SPR;       //
+
+
+} SPI_map;
+#define SPI1 ((SPI_map *) SPI1_REGS)
+#define SPI2 ((SPI_map *) SPI2I2S2_REGS)
+#define SPI3 ((SPI_map *) SPI3I2S3_REGS)
+#define SPI4 ((SPI_map *) SPI4_REGS)
 
 #endif
