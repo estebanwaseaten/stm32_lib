@@ -104,8 +104,6 @@ void CLOCK_init( void )
     SETBITS( RCC->CFGR, 0x7, 18 );    //set PLL mult to 0111 = x9 --> 72MHz
     SETBIT( RCC->CFGR, 16 );          //set PLL src to HSE
 
-
-
     //turn on PLL
     SETBIT( RCC->CR, 24 );           //turn on PLL
     while( !CHKBIT(RCC->CR, 25) )    //check if it is on
@@ -116,7 +114,8 @@ void CLOCK_init( void )
 
     //set HSE as sysclock (does not matter)
     SETBIT( RCC->CFGR, 0 );           //set HSE as system clock
-    //SETBIT( RCC->CFGR, 1 );             //set PLL as system clock
+    //SETBIT( RCC->CFGR, 1 );           //set PLL as system clock --> need to use APB1 prescaler /2
+    //SETBIT( RCC->CFGR, 10 );          //set APB1 prescaler to /2 DOUBLE CHECK!!
     while( !CHKBIT(RCC->CFGR, 2) )    //check if HSE is selected as system clock
     {
         __asm("nop");
@@ -397,7 +396,7 @@ void SPI_test( void )
         while( !CHKBIT( SPI1->SR, 1 )){}    //wait until transmit buffer is empty
         //*(uint8_t *)&SPI1->DR = 0xAA;
         *(uint8_t *)&SPI1->DR = 0xF0;
-        *(uint8_t *)&SPI1->DR = 0x0F;
+    //    *(uint8_t *)&SPI1->DR = 0x0F;
     //    *(uint8_t *)&SPI1->DR = 0xAA;
     //    *(uint8_t *)&SPI1->DR = 0xAA;
     //    *(uint8_t *)&SPI1->DR = 0xAA;
