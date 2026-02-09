@@ -48,6 +48,7 @@ int ADC_disable( uint32_t ADCnum );
 void SPI_init( void );
 int SPI_enable( uint32_t SPInum );
 int SPI_disable( uint32_t SPInum );
+void SPI_interrupt( uint8_t SPInum );
 void SPI_test( void );
 
 #endif

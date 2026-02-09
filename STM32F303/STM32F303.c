@@ -120,14 +120,6 @@ void CLOCK_init( void )
     {
         __asm("nop");
     }
-
-    //setWord( 0x20009000, RCC->CR );
-    //clocks are running fine
-    //setWord( 0x20009000, RCC->CFGR );
-    //HSE is selected as system clock
-    //setWord( 0x20009000, RCC->CIR );
-    //interrupts are clear
-    //setWord( 0x20009000, RCC->APB2RSTR );
 }
 
 /************** GPIO functions
@@ -142,7 +134,7 @@ void GPIO_init( void )
     //setWord( 0x20009000, RCC->AHBENR );
 }
 
-void GPIO_changeFunction( uint32_t pin, uint32_t function )
+void GPIO_changeFunction( uint32_t pin, uint32_t function ) //not done yet
 {
     //set mode for PIN to output:
     SETBITS( GPIOA->MODER, 0x1, pin*2 );
@@ -332,7 +324,6 @@ int SPI_enable( uint32_t SPInum )
     SETBITS( GPIOA->AFRL, 0x5, 6*4 );
     SETBITS( GPIOA->AFRL, 0x5, 7*4 );
 
-
     //could enable cyclic redundancy check (CRC):
     //SETBIT( SPI1->CR1, 13 );
     //SETBIT( SPI1->CR1, 12 );
@@ -347,9 +338,6 @@ int SPI_enable( uint32_t SPInum )
 
     //SETBIT( SPI1->CR1, 7 );      // LSB first
     CLRBIT( SPI1->CR1, 7 );        // MSB first
-
-    //baud rate is based on PCLK... dvider is set in SPI->CR1[5:3]
-    //SETBITS( SPI1->CR1, 0x7, 3 );    //set low for now
 
     CLRBIT( SPI1->CR1, 2 );         //slave configuration
     //SETBIT( SPI1->CR1, 2 );       //master configuration
@@ -369,8 +357,14 @@ int SPI_enable( uint32_t SPInum )
     //set FIFO reception threshold for 8 bit transfer
     SETBIT( SPI1->CR2, 12 );    // FRXTH
 
-    SETBIT( SPI1->CR1, 6 );        // SPI enable
+    //interrupts:
+    (void)SPI1->SR; (void)SPI1->DR;  // read to clear RXNE/OVR if set
+    SETBIT( SPI1->CR2, 6 );    // RX buffer not empty interrupt enable
 
+    uint32_t bank = (SPI1_IRQ >> 5);
+    SETBIT( NVIC_ISER->BANK[bank], SPI1_IRQ - bank*32);   //interrupt #35 is the SPI interrupt
+
+    SETBIT( SPI1->CR1, 6 );        // SPI enable
 
     return 0;
 }
@@ -380,17 +374,30 @@ void SPI_receive()
 
 }
 
+void SPI_interrupt( uint8_t SPInum )
+{
+    setWord( 0x20009010, 0xAB );                    //testing
+    uint32_t counter = getWord( 0x20009008 );       //testing
+    setWord( 0x20009008, counter + 1 );             //testing
+
+    //clear interrupt by reading:
+    if( CHKBIT( SPI1->SR , 0 ) )
+    {
+        uint8_t received = *(uint8_t *)&SPI1->DR;
+        setWord( 0x20009000, (uint32_t)received );
+
+        *(uint8_t *)&SPI1->DR = received + 1;
+    }
+}
+
 //test
 void SPI_test( void )
 {
-
-    uint32_t counter = 0;
-    setWord( 0x20009008, 0);
+    setWord( 0x20009008, 0);    //counter
 
     while(1)
     {
         setWord( 0x2000900C, SPI1->SR );
-        counter = getWord( 0x20009008 );
 
 
         while( !CHKBIT( SPI1->SR, 1 )){}    //wait until transmit buffer is empty
@@ -407,11 +414,11 @@ void SPI_test( void )
 
 
         while( !CHKBIT( SPI1->SR, 0 )){}     //wait until receive buffer is not empty
-        uint8_t received = *(uint8_t *)&SPI1->DR;
+        //uint8_t received = *(uint8_t *)&SPI1->DR;
 
 
-        setWord( 0x20009008, counter + 1);
-        setWord( 0x20009000, (uint32_t)received );
+        //setWord( 0x20009008, counter + 1);
+        //setWord( 0x20009000, (uint32_t)received );
 
         for( int i = 0; i < 100; i++ )
         {

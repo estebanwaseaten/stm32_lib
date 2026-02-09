@@ -81,8 +81,37 @@
     #define ADC4_REGS           0x50000500
     #define ADC3_4_COMMON_REGS   0x50000700
 
+
+// INTERRUPT CONSTANTS
+#define NUM_VECTORS 100
+#define SPI1_IRQ 35
+
 //cortex M4 internal peripherals
 #define CORTEX_BASE 0xE0000000
+    #define CORTEX_NVIC_ISER 0xE000E100
+    #define CORTEX_NVIC_ICER 0xE000E180
+    #define CORTEX_NVIC_ISPR 0xE000E200
+    #define CORTEX_NVIC_ICPR 0xE000E280
+    #define CORTEX_NVIC_IABR 0xE000E300
+    #define CORTEX_NVIC_IPR 0xE000E400
+    #define CORTEX_NVIC_STIR 0xE000EF00
+
+typedef struct
+{
+    volatile uint32_t   BANK[8];  //
+} IRQ_map;
+#define NVIC_ISER ((IRQ_map *) CORTEX_NVIC_ISER)
+#define NVIC_ICER ((IRQ_map *) CORTEX_NVIC_ICER)
+#define NVIC_ISPR ((IRQ_map *) CORTEX_NVIC_ISPR)
+#define NVIC_ICPR ((IRQ_map *) CORTEX_NVIC_ICPR)
+#define NVIC_IABR ((IRQ_map *) CORTEX_NVIC_IABR)
+
+typedef struct
+{
+    volatile uint32_t   BANK[60];  //
+} IRQ_PRIO_map;
+#define NVIC_IPR ((IRQ_PRIO_map *) CORTEX_NVIC_IPR)
+
 
 // ******************** ADC
 // 4 ADSc with max. 19 channels each
