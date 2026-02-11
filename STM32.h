@@ -5,7 +5,19 @@
 
 #include <stdint.h>
 
-enum pin_functions
+//SPI interrupt types (can or them together)
+#define SPI_TXEI 4
+#define SPI_RXNEI 2
+#define SPI_ERRI 1
+enum spi_bits
+{
+    SPI_8BITSPERWORD,
+    SPI_16BITSPERWORD
+};
+
+
+
+enum gpio_pin_functions
 {
     PIN_OUTPUT,
     PIN_INPUT
@@ -45,10 +57,18 @@ int ADC_enable( uint32_t ADCnum );
 int ADC_disable( uint32_t ADCnum );
 
 //SPI
-void SPI_init( void );
-int SPI_enable( uint32_t SPInum );
+int SPI_init( uint32_t SPInum );
+int SPI_enable( uint32_t SPInum, uint8_t bitsPerWord );
 int SPI_disable( uint32_t SPInum );
-void SPI_interrupt( uint8_t SPInum );
+
+int SPI_enable_interrupt( uint32_t SPInum, int interruptType );
+
 void SPI_test( void );
+int32_t SPI_receive( void );
+
+// for setting custom handlers (implement as needed)
+typedef void (*isr_t)(void);
+void setHandler_SPI1( isr_t fn );
+
 
 #endif

@@ -85,6 +85,10 @@
 // INTERRUPT CONSTANTS
 #define NUM_VECTORS 100
 #define SPI1_IRQ 35
+#define SPI2_IRQ 36
+#define USART1_IRQ 36
+#define SPI3_IRQ 51
+#define SPI4_IRQ 84
 
 //cortex M4 internal peripherals
 #define CORTEX_BASE 0xE0000000
@@ -95,6 +99,8 @@
     #define CORTEX_NVIC_IABR 0xE000E300
     #define CORTEX_NVIC_IPR 0xE000E400
     #define CORTEX_NVIC_STIR 0xE000EF00
+
+#define CORTEXT_SCB_BASE 0xE000ED00
 
 typedef struct
 {
@@ -111,6 +117,68 @@ typedef struct
     volatile uint32_t   BANK[60];  //
 } IRQ_PRIO_map;
 #define NVIC_IPR ((IRQ_PRIO_map *) CORTEX_NVIC_IPR)
+
+
+typedef struct
+{
+    volatile uint32_t CPUID;
+    volatile uint32_t ICSR;
+    volatile uint32_t VTOR;
+    volatile uint32_t AIRCR;
+    volatile uint32_t SCR;
+    volatile uint32_t CCR;
+    volatile uint32_t SHPR1;
+    volatile uint32_t SHPR2;
+    volatile uint32_t SHPR3;
+    volatile uint32_t SHCSR;
+    volatile uint32_t CFSR;
+    volatile uint32_t HFSR;
+    volatile uint32_t DFSR;
+    volatile uint32_t MMFAR;
+    volatile uint32_t BFAR;
+    volatile uint32_t AFSR;
+    volatile uint32_t res1;
+    //continues....
+} SCS_map;
+#define SCB ((SCS_map *) CORTEXT_SCB_BASE)
+
+
+
+//DMA
+typedef struct
+{
+    volatile uint32_t CCR;
+    volatile uint32_t CNDTR;
+    volatile uint32_t CPAR;
+    volatile uint32_t CMAR;
+    volatile uint32_t res;  //dont access --> out of bounds for last
+} DMA_channel_map;
+
+typedef struct
+{
+    volatile uint32_t ISR;
+    volatile uint32_t IFCR;
+
+    volatile DMA_channel_map CH[7];
+} DMA_map;
+#define DMA1 ((DMA_map *) DMA1_REGS)
+#define DMA2 ((DMA_map *) DMA2_REGS)
+
+
+
+//FLASH
+typedef struct
+{
+    volatile uint32_t ACR;
+    volatile uint32_t KEYR;
+    volatile uint32_t OPTKEYR;
+    volatile uint32_t SR;
+    volatile uint32_t CR;
+    volatile uint32_t AR;
+    volatile uint32_t OBR;
+    volatile uint32_t WRPR;
+} FLASH_map;
+#define FLASH ((FLASH_map *)FLASHINT_REGS)
 
 
 // ******************** ADC
@@ -231,12 +299,16 @@ typedef struct
     volatile uint32_t   TXCRCR;      //
     volatile uint32_t   I2SCFGR;     //
     volatile uint32_t   I2SPR;       //
-
-
 } SPI_map;
 #define SPI1 ((SPI_map *) SPI1_REGS)
 #define SPI2 ((SPI_map *) SPI2I2S2_REGS)
 #define SPI3 ((SPI_map *) SPI3I2S3_REGS)
 #define SPI4 ((SPI_map *) SPI4_REGS)
+
+//generate array for easier access!
+extern volatile SPI_map * const SPI[5];    //needs to be initialized
+
+
+
 
 #endif

@@ -6,4 +6,4 @@ MEMORY
 
 _estack = 0x20001800;	# I would like to use 0x20001800 - 2x20002000 for debugging
 
-INCLUDE ../stm32_lib/sections.ld	#weird.. maybe because we are inside the build folder"?
+INCLUDE ../stm32_lib/STM32L053/sections.ld	#weird.. maybe because we are inside the build folder"?

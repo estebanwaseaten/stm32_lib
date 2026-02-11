@@ -7,7 +7,6 @@ void waitCycles( uint32_t cycles )
 		__asm("nop");
 	}
 }
-
 void setWord( uint32_t addr, uint32_t word )
 {
 	volatile uint32_t *ptr = (uint32_t*)addr;

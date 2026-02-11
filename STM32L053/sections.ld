@@ -1,5 +1,6 @@
 SECTIONS
 {
+	. = ORIGIN(SRAM);		/* put vector table at start of SRAM*/
 	.isr_vector : ALIGN(4)
 	{
 		KEEP(*(.isr_vector))
