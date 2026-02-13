@@ -13,7 +13,7 @@ void setWord( uint32_t addr, uint32_t word )
 	*ptr = word;
 }
 
-uint32_t getWord( uint32_t addr )
+uint32_t getWord( uint32_t addr )	//this works for addresses, not registers!
 {
 	volatile uint32_t *ptr = (uint32_t*)addr;
 	return *ptr;

@@ -11,6 +11,8 @@
 
 void ADC_init( void )
 {
+    GPIO_init();    //just to make sure
+
     //enable ADC clock for both ADCs (bits 28 and 29 for ADC1/2 and ADC3/4) --> RCC clock up to 72MHz
     SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
     SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
@@ -25,6 +27,12 @@ int ADC_enable( uint32_t ADCnum )
             //config input in analog mode:
             SETBITS( GPIOA->MODER, 0x3, 0*2 );      // PA0 alternate function (analog mode)
             SETBITS( GPIOA->MODER, 0x3, 1*2 );      // PA1 alternate function (analog mode)
+            SETBITS( GPIOA->MODER, 0x3, 2*2 );      // PA2 alternate function (analog mode)
+
+            CLRBITS( GPIOA->PUPDR, 0x3, 0*2 );      // no pull no push
+            CLRBITS( GPIOA->PUPDR, 0x3, 1*2 );
+            CLRBITS( GPIOA->PUPDR, 0x3, 2*2 );
+
 
             CLRWRD( ADC1_2_COMMON->CCR );
 
@@ -33,7 +41,7 @@ int ADC_enable( uint32_t ADCnum )
             {
                 CLRBITS( ADC1->CR, 0x3, 28 );   //reset ADVREGEN[1:0] = 00
                 SETBIT( ADC1->CR, 28 );         //enable voltage regulator ADVREGEN[1:0] = 01
-                waitCycles(1000000);    //enough?
+                waitCycles(10000000);    //enough?
 
             }
 
@@ -68,8 +76,8 @@ int ADC_enable( uint32_t ADCnum )
             CLRWRD( ADC1->SQR4 );
 
             CLRWRD( ADC1->SMPR1 );              //fastest sample time
-            SETBITS( ADC1->SMPR1, 0x5, 3 );     //slowest sample time
-            SETBITS( ADC1->SMPR1, 0x5, 6 );     //slowest sample time
+            SETBITS( ADC1->SMPR1, 0x3, 3 );     //slower sample time
+            SETBITS( ADC1->SMPR1, 0x3, 6 );     //slower sample time
 
             CLRBIT( ADC1->CFGR, 16 );           // discontinuous mode for regular channels disabled DISCEN = 0
             CLRBIT( ADC1->CFGR, 13 );           // single conversion mode CONT = 0
@@ -113,7 +121,7 @@ int ADC_enable( uint32_t ADCnum )
     return 0;
 }
 
-uint16_t ADC_read( uint32_t ADCnum )
+uint16_t ADC_read_single( uint32_t ADCnum )
 {
     //Software starts ADC regular conversions by setting ADSTART=1; immediately: if EXTEN = 0x0 (software trigger)
 
@@ -121,10 +129,10 @@ uint16_t ADC_read( uint32_t ADCnum )
 
     while( !CHKBIT( ADC1->ISR, 3 ) )    //conversion not complete 3 = EOS, 2 = EOC
     {
-
+        __asm("nop");
     }
 
-    return getWord( ADC1->DR );
+    return (uint16_t)ADC1->DR;
 }
 
 // ADC_read_dma( uint32_t ADCnum, uint32_t datapoints ){}

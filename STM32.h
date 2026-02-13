@@ -66,7 +66,7 @@ int GPIO_get( uint32_t pin );
 void ADC_init( void );
 int ADC_enable( uint32_t ADCnum );
 int ADC_disable( uint32_t ADCnum );
-uint16_t ADC_read( uint32_t ADCnum );
+uint16_t ADC_read_single( uint32_t ADCnum );
 
 //SPI
 int SPI_init( uint32_t SPInum );
