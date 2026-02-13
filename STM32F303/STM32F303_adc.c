@@ -1,79 +1,6 @@
 #include "../STM32.h"
 #include "STM32F303.h"
 
-#include <stddef.h>
-
-void ADCtest( void )
-{
-    setWord( 0x20009000, 0 );
-    setWord( 0x20009004, 0 );
-    setWord( 0x20009008, 0 );
-    setWord( 0x2000900C, 0 );
-
-    //turn on HSE
-    SETBIT( RCC->CR, 16 );           //turn on HSE
-    while( !CHKBIT(RCC->CR, 17) )   //check if it is on
-    {
-        __asm("nop");
-    }
-
-    //settings for ADC and PLL dividers
-    CLRWRD( RCC->CFGR2 );
-    SETBIT( RCC->CFGR2, 13 );       //ADC34 PLL clock divided by 1
-    SETBIT( RCC->CFGR2, 8 );        //ADC12 PLL clock divided by 1
-    CLRBITS( RCC->CFGR2, 0xF, 0);    //HSE input to PLL not divided
-
-    //settings for PLL mult and set PLL source
-    CLRWRD( RCC->CFGR );
-    SETBITS( RCC->CFGR, 0x7, 18 );    //set PLL mult to 0111 = x9 --> 72MHz
-    SETBIT( RCC->CFGR, 16 );          //set PLL src to HSE
-
-    //set HSE as sysclock (does not matter)
-    SETBIT( RCC->CFGR, 0 );           //set HSE as system clock
-    while( !CHKBIT(RCC->CFGR, 2) )    //check if HSE is selected as system clock
-    {
-        __asm("nop");
-    }
-
-    //turn on PLL
-    SETBIT( RCC->CR, 24 );           //turn on PLL
-    while( !CHKBIT(RCC->CR, 25) )    //check if it is on
-    {
-        __asm("nop");
-    }
-
-    //enable ADC clocks
-    SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
-    SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
-
-    __asm("nop");			//execute four cycles before
-    __asm("nop");
-    __asm("nop");
-    __asm("nop");
-
-    CLRWRD( ADC1_2_COMMON->CCR );
-
-    //enable ADC voltage regulator if not on.
-    if( !CHKBIT( ADC1->CR, 28 ) )
-    {
-        CLRBITS( ADC1->CR, 0x3, 28 );   //reset ADVREGEN[1:0] = 00
-        SETBIT( ADC1->CR, 28 );         //enable voltage regulator ADVREGEN[1:0] = 01
-        for (int i = 0; i < 100000; i++)    //wait at least 10 us (T_ADCVREG_STUP)
-        {
-            __asm("nop");
-        }
-    }
-
-    //enable ADC
-    SETBIT( ADC1->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;
-    while( !CHKBIT( ADC1->ISR, 0 ) )    //ISR register bit 0 is the ready flag
-    {
-        __asm("nop");
-    }
-
-}
-
-
 
 /************** ADC functions
  * 1. enable ADC internal voltage regulator (ADC voltage regulator enable sequence: a) change ADVREGEN[1:0] from 10 to 00 b) change from 00 to 01 )
@@ -95,6 +22,10 @@ int ADC_enable( uint32_t ADCnum )
     switch ( ADCnum )
     {
         case 1:
+            //config input in analog mode:
+            SETBITS( GPIOA->MODER, 0x3, 0*2 );      // PA0 alternate function (analog mode)
+            SETBITS( GPIOA->MODER, 0x3, 1*2 );      // PA1 alternate function (analog mode)
+
             CLRWRD( ADC1_2_COMMON->CCR );
 
             //enable ADC voltage regulator if not on.
@@ -102,18 +33,46 @@ int ADC_enable( uint32_t ADCnum )
             {
                 CLRBITS( ADC1->CR, 0x3, 28 );   //reset ADVREGEN[1:0] = 00
                 SETBIT( ADC1->CR, 28 );         //enable voltage regulator ADVREGEN[1:0] = 01
-                for (int i = 0; i < 100000; i++)    //wait at least 10 us (T_ADCVREG_STUP)
-                {
-                    __asm("nop");
-                }
+                waitCycles(1000000);    //enough?
+
             }
 
+            //ADD CALIBRATION:
+        	CLRBIT( ADC1->CR, 30 );		// ADCALDIF=0 for single ended cal
+        	//SETBIT( ADC1->CR, 30 );	// ADCALDIF=1 for differential cal
+        	SETBIT( ADC1->CR, 31 ); 	// ADCAL=1 to start cal
+        	// wait until ADCAL is zero again
+        	while( CHKBIT( ADC1->CR, 31 ) )
+            {
+                __asm("nop");
+            }
+            waitCycles(4);
+
+            //some stuff needs to be set before AD is enabled!!
+            //SETBIT( ADC1->DIFSEL, 1 );
+            CLRBIT( ADC1->DIFSEL, 1 );
+
             //enable ADC
-            SETBIT( ADC1->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;
+            SETBIT( ADC1->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;    "ADEN"
             while( !CHKBIT( ADC1->ISR, 0 ) )    //ISR register bit 0 is the ready flag
             {
                 __asm("nop");
             }
+
+            CLRBITS( ADC1->CFGR, 0x3, 10 );         //EXTEN = 0 --> software trigger by setting ADSTART
+            CLRWRD( ADC1->SQR1 );                   //clear sequence -> sequence-length = 1 conversion
+            SETBITS( ADC1->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence
+            //SETBITS( ADC1->SQR1, 0x2 , 6 );       //select channel 2 for 1st conversion in regular sequence
+            CLRWRD( ADC1->SQR2 );
+            CLRWRD( ADC1->SQR3 );
+            CLRWRD( ADC1->SQR4 );
+
+            CLRWRD( ADC1->SMPR1 );              //fastest sample time
+            SETBITS( ADC1->SMPR1, 0x5, 3 );     //slowest sample time
+            SETBITS( ADC1->SMPR1, 0x5, 6 );     //slowest sample time
+
+            CLRBIT( ADC1->CFGR, 16 );           // discontinuous mode for regular channels disabled DISCEN = 0
+            CLRBIT( ADC1->CFGR, 13 );           // single conversion mode CONT = 0
 
             //start conversion with ADSTART=1: ADC1->CR |= 4;
             // The converted data are stored into the 16-bit ADCx_DR register
@@ -154,7 +113,22 @@ int ADC_enable( uint32_t ADCnum )
     return 0;
 }
 
-//int ADC_read()
+uint16_t ADC_read( uint32_t ADCnum )
+{
+    //Software starts ADC regular conversions by setting ADSTART=1; immediately: if EXTEN = 0x0 (software trigger)
+
+    SETBIT( ADC1->CR, 2 );              //ADC start regular conversion  ADSTART
+
+    while( !CHKBIT( ADC1->ISR, 3 ) )    //conversion not complete 3 = EOS, 2 = EOC
+    {
+
+    }
+
+    return getWord( ADC1->DR );
+}
+
+// ADC_read_dma( uint32_t ADCnum, uint32_t datapoints ){}
+
 
 int ADC_disable( uint32_t ADCnum )
 {

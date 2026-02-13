@@ -171,26 +171,46 @@ int SPI_enable_interrupt( uint32_t SPInum, int interruptType )
     return 0;
 }
 
-int32_t SPI_receive( void )
+int SPI_receive( void )
 {
-    //setWord( 0x20009010, 0xAB );                    //testing
-    uint32_t counter = getWord( 0x20009008 );       //testing
-    setWord( 0x20009008, counter + 1 );             //testing
+    //setWord( 0x20009000, SPI[1]->SR );
 
     //if( kSPIbitsPerWord[1] == SPI_16BITSPERWORD )
-
-    uint16_t received = 0;
     //clear interrupt by reading:
     if( CHKBIT( SPI1->SR , 0 ) )
     {
-        received = *(uint16_t *)&SPI1->DR;
-//        setWord( 0x20009000, (uint32_t)received );
-        *(uint16_t *)&SPI1->DR = received + 1;
+        uint16_t received = *(uint16_t *)&SPI1->DR;
+        //setWord( 0x20009004, (uint32_t)received );
+//        *(uint16_t *)&SPI1->DR = received + 1;
         return received;
     }
     return -1;
 }
 
+int SPI_isBusy( )
+{
+    return CHKBIT( SPI[1]->SR, 7 );
+}
+
+int SPI_send( uint16_t data )
+{
+    //only send if TX buffer empty
+    if( !(CHKBIT( SPI[1]->SR, 12 ) || CHKBIT( SPI[1]->SR, 11 )) ) // only if fifo empty!
+    //if( CHKBIT( SPI1->SR , 1 ) )    //tx buffer empty
+    {
+        //setWord( 0x20009010, SPI[1]->SR );
+        //setWord( 0x20009014, data );
+        *(uint16_t *)&SPI1->DR = data;      //sets half word...
+        return 0;
+    }
+    return -1;
+}
+
+void SPI_reset( void )
+{
+    CLRBIT( SPI[1]->CR1, 6 );        // SPI disable
+    SETBIT( SPI[1]->CR1, 6 );        // SPI enable
+}
 
 
 //test

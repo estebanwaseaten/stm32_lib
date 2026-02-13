@@ -29,7 +29,7 @@ void GPIO_unset( uint32_t pin )
     GPIOA->BSRR = ( 1 << ( pin + 16 ) );
 }
 
-uint32_t GPIO_get( uint32_t pin )
+int GPIO_get( uint32_t pin )
 {
     return 0;
 }

@@ -308,7 +308,8 @@ typedef struct
 //generate array for easier access!
 extern volatile SPI_map * const SPI[5];    //needs to be initialized
 
-
+#define CLKSPEED_HSI 8.0  //8MHz RC oscillator clock
+#define CLKSPEED_HSE 8.0  //8MHz ext osc clock
 
 
 #endif
