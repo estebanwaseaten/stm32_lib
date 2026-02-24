@@ -4,6 +4,8 @@
 #define STM32_H
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>     //NULL
 
 //SPI interrupt types (can or them together)
 #define SPI_TXEI 4
@@ -48,11 +50,18 @@ void waitCycles( uint32_t cycles );
 
 void STMtest( void );
 
+
 //RCC (clock)
 void CLOCK_init( uint32_t sysClk );
 void CLOCK_start_HSI( void );
 void CLOCK_start_HSE( void );
 void CLOCK_start_PLL( uint32_t pllSource );
+
+void CLOCK_enable_sysTick( uint32_t clockSpeed );
+
+
+uint32_t CLOCK_get_sysClk( void );
+uint32_t CLOCK_get_pllClk( void );
 
 
 //GPIO
@@ -81,9 +90,22 @@ void SPI_test( void );
 int SPI_receive( void );
 int SPI_send( uint16_t data );
 
+//DMA
+void DMA_init( void );
+
+//TIMERS
+void TIMER_init( void );
+void TIMER_enable( uint32_t tim, uint32_t divider );
+void TIMER_disable( uint32_t tim );
+
+
 // for setting custom handlers (implement as needed)
 typedef void (*isr_t)(void);
+void setHandler_SysTick( isr_t fn );
 void setHandler_SPI1( isr_t fn );
+void setHandler_TIM2( isr_t fn );   //general purpose timer
+void setHandler_TIM3( isr_t fn );   //general purpose timer
+void setHandler_TIM4( isr_t fn );   //general purpose timer
 
 
 #endif

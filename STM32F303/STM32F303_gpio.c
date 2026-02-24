@@ -1,14 +1,21 @@
 #include "../STM32.h"
 #include "STM32F303.h"
 
+
+bool initialized = false;
+
 /************** GPIO functions
  *
  *
  */
 void GPIO_init( void )
 {
+    if( initialized )
+        return;
+
     SETBIT( RCC->AHBENR, 17 );      //set GPIOA enabled
     SETBIT( RCC->AHBENR, 18 );      //set GPIOB enabled
+    initialized = true;
     __asm("nop");			            // execute one cycle (do nothing)
     //setWord( 0x20009000, RCC->AHBENR );
 }

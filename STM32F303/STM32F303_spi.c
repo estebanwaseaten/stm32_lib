@@ -1,7 +1,6 @@
 #include "../STM32.h"
 #include "STM32F303.h"
 
-#include <stddef.h>
 
 //generate array for easier access!
 volatile SPI_map * const SPI[5] = {
@@ -49,13 +48,10 @@ int SPI_init( uint32_t SPInum )         //enables BUS clock
 }
 
 
-//SPI_8BITSPERWORD or SPI_16BITSPERWORD
+//SPI_8BITSPERWORD or SPI_16BITSPERWORD --- maybe should enable certain pins...
 int SPI_enable( uint32_t SPInum, uint8_t bitsPerWord )
 {   // possible mappings found in datasheet
     //setup pins:
-
-
-
     CLRBITS( GPIOA->MODER, 0x3, 5*2 );      //clear function
     CLRBITS( GPIOA->MODER, 0x3, 6*2 );      //clear function
     CLRBITS( GPIOA->MODER, 0x3, 7*2 );      //clear function
@@ -70,7 +66,6 @@ int SPI_enable( uint32_t SPInum, uint8_t bitsPerWord )
     CLRBIT( GPIOA->OTYPER, 7 );
     SETBITS( GPIOA->OSPEEDR, 0x3, 6*2 );    // MISO -> output
     CLRBITS( GPIOA->PUPDR, 0x3, 6*2 );
-
 
     //alternate function select: PA4, 5, 6 and 7: AF5 = 0101
     CLRBITS( GPIOA->AFRL, 0xF, 5*4 );
@@ -180,7 +175,7 @@ int SPI_receive( void )
     if( CHKBIT( SPI1->SR , 0 ) )
     {
         uint16_t received = *(uint16_t *)&SPI1->DR;
-        //setWord( 0x20009004, (uint32_t)received );
+        setWord( 0x20009004, (uint32_t)received );
 //        *(uint16_t *)&SPI1->DR = received + 1;
         return received;
     }

@@ -2,6 +2,23 @@
 #include "STM32F303.h"
 
 
+
+//init for easier access
+volatile ADC_map * const ADC[5] = {
+    NULL,
+    [1] = (volatile ADC_map *)ADC1_REGS,
+    [2] = (volatile ADC_map *)ADC2_REGS,
+    [3] = (volatile ADC_map *)ADC3_REGS,
+    [4] = (volatile ADC_map *)ADC4_REGS
+};
+volatile ADC_common_map * const ADC_common[5] = {
+    NULL,
+    [1] = (volatile ADC_common_map *)ADC1_2_COMMON_REGS,
+    [2] = (volatile ADC_common_map *)ADC1_2_COMMON_REGS,
+    [3] = (volatile ADC_common_map *)ADC3_4_COMMON_REGS,
+    [4] = (volatile ADC_common_map *)ADC3_4_COMMON_REGS
+};
+
 /************** ADC functions
  * 1. enable ADC internal voltage regulator (ADC voltage regulator enable sequence: a) change ADVREGEN[1:0] from 10 to 00 b) change from 00 to 01 )
  * 2. wait 10us for startup time

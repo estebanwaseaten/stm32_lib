@@ -83,24 +83,46 @@
 
 
 // INTERRUPT CONSTANTS
-#define NUM_VECTORS 100
+#define NUM_VECTORS     100
+#define TIM1_BRK_IRQ    24
+#define TIM1_UP_IRQ     25
+#define TIM1_TRG_IRQ    26
+#define TIM1_CC_IRQ     27
+#define TIM2_IRQ 28
+#define TIM3_IRQ 29
+#define TIM4_IRQ 30
 #define SPI1_IRQ 35
 #define SPI2_IRQ 36
 #define USART1_IRQ 36
 #define SPI3_IRQ 51
 #define SPI4_IRQ 84
 
+
 //cortex M4 internal peripherals
 #define CORTEX_BASE 0xE0000000
+    #define CORTEX_SYSCTRL   0xE000E000
+    #define CORTEX_SYSTICK   0xE000E010
     #define CORTEX_NVIC_ISER 0xE000E100
     #define CORTEX_NVIC_ICER 0xE000E180
     #define CORTEX_NVIC_ISPR 0xE000E200
     #define CORTEX_NVIC_ICPR 0xE000E280
     #define CORTEX_NVIC_IABR 0xE000E300
-    #define CORTEX_NVIC_IPR 0xE000E400
+    #define CORTEX_NVIC_IPR  0xE000E400
+    #define CORTEXT_SCB_BASE 0xE000ED00
     #define CORTEX_NVIC_STIR 0xE000EF00
 
-#define CORTEXT_SCB_BASE 0xE000ED00
+
+
+typedef struct
+{
+    volatile uint32_t CSR;    //sysTick control reg.
+    volatile uint32_t RVR;    //sysTick reload value reg.
+    volatile uint32_t CVR;    //sysTick current value reg.
+    volatile uint32_t CR;     //sysTick calibration value reg
+} SYSTICK_map;
+#define SYSTICK ((SYSTICK_map *) CORTEX_SYSTICK)
+
+
 
 typedef struct
 {
@@ -117,6 +139,8 @@ typedef struct
     volatile uint32_t   BANK[60];  //
 } IRQ_PRIO_map;
 #define NVIC_IPR ((IRQ_PRIO_map *) CORTEX_NVIC_IPR)
+
+
 
 
 typedef struct
@@ -143,30 +167,104 @@ typedef struct
 #define SCB ((SCS_map *) CORTEXT_SCB_BASE)
 
 
+// TIMERS
+typedef struct
+{
+    volatile uint32_t CR1;
+    volatile uint32_t CR2;
+    volatile uint32_t SMCR;
+    volatile uint32_t DIER;
+    volatile uint32_t SR;
+    volatile uint32_t EGR;
+    volatile uint32_t CCMR1;
+    volatile uint32_t CCMR2;
+    volatile uint32_t CCER;
+    volatile uint32_t CNT;
+    volatile uint32_t PSC;
+    volatile uint32_t ARR;
+    volatile uint32_t RCR;
+    volatile uint32_t CCR1;
+    volatile uint32_t CCR2;
+    volatile uint32_t CCR3;
+    volatile uint32_t CCR4;
+    volatile uint32_t BDTR;
+    volatile uint32_t DCR;
+    volatile uint32_t DMAR;
+    volatile uint32_t OR;
+    volatile uint32_t CCMR3;
+    volatile uint32_t CCR5;
+    volatile uint32_t CCR6;
+} TIMER_adv_map;
 
-//DMA
+typedef struct
+{
+    volatile uint32_t CR1;
+    volatile uint32_t CR2;
+    volatile uint32_t SMCR;         //not for basic timers
+    volatile uint32_t DIER;
+    volatile uint32_t SR;
+    volatile uint32_t EGR;
+    volatile uint32_t CCMR1;        //not for basic timers
+    volatile uint32_t CCMR2;        //not for basic timers
+    volatile uint32_t CCER;         //not for basic timers
+    volatile uint32_t CNT;
+    volatile uint32_t PSC;
+    volatile uint32_t ARR;
+    volatile uint32_t res1;         //not for basic timers
+    volatile uint32_t CCR1;         //not for basic timers
+    volatile uint32_t CCR2;         //not for basic timers
+    volatile uint32_t CCR3;         //not for basic timers
+    volatile uint32_t CCR4;         //not for basic timers
+    volatile uint32_t DCR;          //not for basic timers
+    volatile uint32_t DMAR;         //not for basic timers
+} TIMER_gp_map;
+
+#define TIM2 ((TIMER_gp_map *) TIM2_REGS)
+#define TIM3 ((TIMER_gp_map *) TIM3_REGS)
+#define TIM4 ((TIMER_gp_map *) TIM4_REGS)
+
+// TIMERS
+typedef struct
+{
+    volatile uint32_t CR1;
+    volatile uint32_t CR2;
+    volatile uint32_t res1;         //not for basic timers
+    volatile uint32_t DIER;
+    volatile uint32_t SR;
+    volatile uint32_t EGR;
+    volatile uint32_t res2;        //not for basic timers
+    volatile uint32_t res3;        //not for basic timers
+    volatile uint32_t res4;         //not for basic timers
+    volatile uint32_t CNT;
+    volatile uint32_t PSC;
+    volatile uint32_t ARR;
+
+} TIMER_basic_map;
+
+// DMA
+// DMA registers that repeat per DMA channel:
 typedef struct
 {
     volatile uint32_t CCR;
     volatile uint32_t CNDTR;
     volatile uint32_t CPAR;
     volatile uint32_t CMAR;
-    volatile uint32_t res;  //dont access --> out of bounds for last
+    volatile uint32_t res;      //dont access --> out of bounds for last
 } DMA_channel_map;
 
+// DMA1 and 2 including repeated channel structure
 typedef struct
 {
-    volatile uint32_t ISR;
-    volatile uint32_t IFCR;
+    volatile uint32_t ISR;      // DMA interrupt status register
+    volatile uint32_t IFCR;     // DMA interrupt flag clear register
 
-    volatile DMA_channel_map CH[7];
+    volatile DMA_channel_map CH[7];     //starting at 0x008, 0x01C, 0x030...
 } DMA_map;
 #define DMA1 ((DMA_map *) DMA1_REGS)
 #define DMA2 ((DMA_map *) DMA2_REGS)
 
 
-
-//FLASH
+// FLASH
 typedef struct
 {
     volatile uint32_t ACR;
@@ -240,6 +338,8 @@ typedef struct
 #define ADC3 ((ADC_map *) ADC3_REGS)
 #define ADC4 ((ADC_map *) ADC4_REGS)
 
+extern volatile ADC_map * const ADC[5];    //needs to be initialized
+
 typedef struct
 {
     volatile uint32_t   CSR;        // ADC Common status register
@@ -249,6 +349,9 @@ typedef struct
 } ADC_common_map;
 #define ADC1_2_COMMON ((ADC_common_map *) ADC1_2_COMMON_REGS)
 #define ADC3_4_COMMON ((ADC_common_map *) ADC3_4_COMMON_REGS)
+
+extern volatile ADC_common_map * const ADC_common[5];    //needs to be initialized
+
 
 typedef struct
 {

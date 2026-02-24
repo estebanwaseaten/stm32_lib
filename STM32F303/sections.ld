@@ -1,32 +1,43 @@
 SECTIONS
 {
 	. = ORIGIN(CCMSRAM);		/* put vector table at start of SRAM*/
-	.isr_vector : ALIGN(4)
+	.isr_vector : ALIGN(512)
 	{
 		KEEP(*(.isr_vector))
 	} > CCMSRAM
 
-	.text : ALIGN(4)
-	{				/* .text is code*/
+	.text :
+	{				/* .text is code */
+		 . = ALIGN(4);
 		_stext = .;
 		*(.text)
 		*(.text.*)
+		*(.rodata)
+ 	    *(.rodata*)
 		 _etext = .;
+		. = ALIGN(4);
 	} > CCMSRAM
 
-	.data : ALIGN(4)
+
+	.data :
 	{				/* .data is initialized data */
+		. = ALIGN(4);
 		 _sdata = .;
 		*(.data)
 		*(.data.*)
+		. = ALIGN(4);
 		_edata = .;
 	} > CCMSRAM
+	PROVIDE(_sidata = LOADADDR(.data));
 
-	.bss : ALIGN(4)
+
+	.bss (NOLOAD) :
 	{				/* .bss is uninitialized data */
+		. = ALIGN(4);
 		_sbss = .;
 		*(.bss)
 		*(.bss.*)
+		. = ALIGN(4);
 		_ebss = .;
 	} > CCMSRAM
 }
