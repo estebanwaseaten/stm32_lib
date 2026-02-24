@@ -11,7 +11,7 @@ volatile SPI_map * const SPI[5] = {
     [4] = (volatile SPI_map *)SPI4_REGS
 };
 
-uint8_t kSPIbitsPerWord[5] = {0, };
+uint8_t kSPIbitsPerWord[5] = {0, };     //in bss section, wont be initialize if the reset handler does not do it
 
 
 /************** SPI functions
@@ -175,7 +175,7 @@ int SPI_receive( void )
     if( CHKBIT( SPI1->SR , 0 ) )
     {
         uint16_t received = *(uint16_t *)&SPI1->DR;
-        setWord( 0x20009004, (uint32_t)received );
+//        setWord( 0x20009004, (uint32_t)received );
 //        *(uint16_t *)&SPI1->DR = received + 1;
         return received;
     }

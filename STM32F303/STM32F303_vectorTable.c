@@ -3,8 +3,8 @@
 #include "STM32F303.h"
 #include "main.h"
 
-extern uint32_t _estack;		//defined in linker script
-extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss;
+extern uint32_t _estack;									//defined in linker script
+extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss;		//defined in linker script
 
 
 void Reset_Handler( void );
@@ -29,12 +29,12 @@ void Reset_Handler( void )
 	SCB->VTOR = (uint32_t)&isr_vectors;
 
 	//copy data (ram only):
-	for( uint32_t *s=&_sidata, *d=&_sdata; d < &_edata; )
-	{
-		*d++ = *s++;
-	}
+//	for( uint32_t *s=&_sidata, *d=&_sdata; d < &_edata; )	I think this is not necessary, maybe??
+//	{
+//		*d++ = *s++;	this would just copy .data to .data
+//	}
 
-	// zero bss:
+	// zero bss: (seems to be important for the program to run under certain conditions)
 	for( uint32_t *d=&_sbss; d < &_ebss; )
 	{
 		*d++ = 0;
@@ -42,7 +42,7 @@ void Reset_Handler( void )
 	// cheesecake does the following already:
 	/*	set VTOR to 0x2000 0000 or whatever address is givem
 	 *	set SP to isr_vectors[0]
-	 *  set some DBG ret to isr_vectors[1]... not sure why
+	 *  set some DBG ret to isr_vectors[1]... not sure why isr_vectors[1] should be the reset handler...
 	*/
 	//SCB->VTOR = (uint32_t)&isr_vectors;
 	//__asm__( "LDR  r0, =_estack\nMOV  sp, r0" );

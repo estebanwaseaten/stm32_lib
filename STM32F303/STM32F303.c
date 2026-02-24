@@ -20,8 +20,8 @@ void CLOCK_init( uint32_t sysClk )
 
     //depending what is needed as sysClk
 
-     g_sysClk = 1;
-     g_pllClk = 1;
+     g_sysClk = 0;
+     g_pllClk = 0;
 
     if ( sysClk == SYSCLK_HSI )
     {
