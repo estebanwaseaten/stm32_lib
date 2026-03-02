@@ -22,6 +22,7 @@ void TIMER_enable( uint32_t tim, uint32_t divider ) //clock cycle divider
         case 1:
             break;
         case 2:
+            
             break;
     }
 }
