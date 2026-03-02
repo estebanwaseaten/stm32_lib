@@ -25,25 +25,37 @@ int SPI_init( uint32_t SPInum )         //enables BUS clock
     {
         case 1:
             if( !CHKBIT( RCC->APB2ENR, 12 ) )   //on APB2
-            { SETBIT( RCC->APB2ENR, 12 ); }     //enable SPI1 clock
+            {
+                SETBIT( RCC->APB2ENR, 12 );     //enable SPI1 clock
+                (void)RCC->APB2ENR;             // read-back to flush/ensure clock gate opened
+            }
             break;
         case 2:
             if( !CHKBIT( RCC->APB1ENR, 14 ) )   //on APB1
-            { SETBIT( RCC->APB1ENR, 14 ); }     //enable SPI2 clock
+            {
+                SETBIT( RCC->APB1ENR, 14 );     //enable SPI2 clock
+                (void)RCC->APB1ENR;             // read-back to flush/ensure clock gate opened
+            }
             break;
         case 3:
             if( !CHKBIT( RCC->APB1ENR, 15 ) )   //on APB1
-            { SETBIT( RCC->APB1ENR, 15 ); }     //enable SPI3 clock
+            {
+                SETBIT( RCC->APB1ENR, 15 );      //enable SPI3 clock
+                (void)RCC->APB1ENR;             // read-back to flush/ensure clock gate opened
+            }
             break;
         case 4:
             if( !CHKBIT( RCC->APB2ENR, 15 ) )   //on APB2
-            { SETBIT( RCC->APB2ENR, 15 ); }     //enable SPI4 clock
+            {
+                SETBIT( RCC->APB2ENR, 15 );     //enable SPI4 clock
+                (void)RCC->APB2ENR;             // read-back to flush/ensure clock gate opened
+            }
             break;
         default:
             return -1;
     }
 
-    waitCycles(4);
+    //waitCycles(4);
     return 0;
 }
 

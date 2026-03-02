@@ -95,7 +95,7 @@ void DMA_init( void );
 
 //TIMERS
 void TIMER_init( void );
-void TIMER_enable( uint32_t tim, uint32_t divider );
+void TIMER_enable( uint32_t tim, uint32_t divider, bool pllSrc );
 void TIMER_disable( uint32_t tim );
 
 

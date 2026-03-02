@@ -13,10 +13,14 @@ void GPIO_init( void )
     if( initialized )
         return;
 
+    //enable clocks
     SETBIT( RCC->AHBENR, 17 );      //set GPIOA enabled
     SETBIT( RCC->AHBENR, 18 );      //set GPIOB enabled
+
+    (void)RCC->AHBENR;  // read-back to flush/ensure clock gate opened
+
     initialized = true;
-    __asm("nop");			            // execute one cycle (do nothing)
+    //__asm("nop");			            // execute one cycle (do nothing)
     //setWord( 0x20009000, RCC->AHBENR );
 }
 

@@ -33,7 +33,8 @@ void ADC_init( void )
     //enable ADC clock for both ADCs (bits 28 and 29 for ADC1/2 and ADC3/4) --> RCC clock up to 72MHz
     SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
     SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
-    waitCycles( 4 );
+    (void)RCC->AHBENR;             // read-back to flush/ensure clock gate opened
+    //waitCycles( 4 );
 }
 
 int ADC_enable( uint32_t ADCnum )
