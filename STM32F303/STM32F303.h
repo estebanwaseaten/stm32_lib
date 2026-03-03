@@ -198,23 +198,24 @@ typedef struct
 
 typedef struct
 {
-    volatile uint32_t CR1;
-    volatile uint32_t CR2;
-    volatile uint32_t SMCR;         //not for basic timers
-    volatile uint32_t DIER;
-    volatile uint32_t SR;
+    volatile uint32_t CR1;          //0x00
+    volatile uint32_t CR2;          //0x04
+    volatile uint32_t SMCR;         //0x08 not for basic timers
+    volatile uint32_t DIER;         //0x0C
+    volatile uint32_t SR;           //0x10
     volatile uint32_t EGR;
     volatile uint32_t CCMR1;        //not for basic timers
     volatile uint32_t CCMR2;        //not for basic timers
-    volatile uint32_t CCER;         //not for basic timers
+    volatile uint32_t CCER;         //0x20 not for basic timers
     volatile uint32_t CNT;
     volatile uint32_t PSC;
     volatile uint32_t ARR;
-    volatile uint32_t res1;         //not for basic timers
+    volatile uint32_t res1;         //0x30 not for basic timers
     volatile uint32_t CCR1;         //not for basic timers
     volatile uint32_t CCR2;         //not for basic timers
     volatile uint32_t CCR3;         //not for basic timers
-    volatile uint32_t CCR4;         //not for basic timers
+    volatile uint32_t CCR4;         //0x40 not for basic timers
+    volatile uint32_t res2;
     volatile uint32_t DCR;          //not for basic timers
     volatile uint32_t DMAR;         //not for basic timers
 } TIMER_gp_map;

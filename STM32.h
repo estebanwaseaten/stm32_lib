@@ -34,11 +34,11 @@ enum gpio_pin_functions
 
 #define SETBIT( reg, bit ) ((reg) |= (1U << (bit)))
 #define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
-#define SETWRD( reg, word ) ((reg) |= (word))
+#define SETWRD( reg, word ) ((reg) = (word))
 
 #define CLRBIT( reg, bit ) ((reg) &= ~(1U << (bit)))
 #define CLRBITS( reg, bits, shift ) ((reg) &= ~((bits) << (shift)))
-#define CLRWRD( reg ) ((reg) &= 0x0)
+#define CLRWRD( reg ) ((reg) = 0x0)
 
 #define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
 
@@ -94,8 +94,11 @@ int SPI_send( uint16_t data );
 void DMA_init( void );
 
 //TIMERS
+uint32_t TIMER_getcount( uint32_t tim );
+void TIMER_clear_interrupt( uint32_t tim );
 void TIMER_init( void );
 void TIMER_enable( uint32_t tim, uint32_t divider, bool pllSrc );
+void TIMER_start( uint32_t tim );
 void TIMER_disable( uint32_t tim );
 
 
