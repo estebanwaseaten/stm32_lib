@@ -96,6 +96,21 @@
 #define USART1_IRQ 36
 #define SPI3_IRQ 51
 #define SPI4_IRQ 84
+#define DMA1_CH1_IRQ 11
+#define DMA1_CH2_IRQ 12
+#define DMA1_CH3_IRQ 13
+#define DMA1_CH4_IRQ 14
+#define DMA1_CH5_IRQ 15
+#define DMA1_CH6_IRQ 16
+#define DMA1_CH7_IRQ 17
+#define DMA2_CH1_IRQ 56
+#define DMA2_CH2_IRQ 57
+#define DMA2_CH3_IRQ 58
+#define DMA2_CH4_IRQ 59
+#define DMA2_CH5_IRQ 60
+#define ADC1_2_IRQ 18
+#define ADC3_IRQ 47
+#define ADC4_IRQ 61
 
 
 //cortex M4 internal peripherals
@@ -123,7 +138,7 @@ typedef struct
 #define SYSTICK ((SYSTICK_map *) CORTEX_SYSTICK)
 
 
-
+// NVIC interrupt banks:
 typedef struct
 {
     volatile uint32_t   BANK[8];  //
@@ -142,7 +157,7 @@ typedef struct
 
 
 
-
+// system control
 typedef struct
 {
     volatile uint32_t CPUID;
@@ -246,11 +261,11 @@ typedef struct
 // DMA registers that repeat per DMA channel:
 typedef struct
 {
-    volatile uint32_t CCR;
-    volatile uint32_t CNDTR;
-    volatile uint32_t CPAR;
-    volatile uint32_t CMAR;
-    volatile uint32_t res;      //dont access --> out of bounds for last
+    volatile uint32_t CCR;      //0x0
+    volatile uint32_t CNDTR;    //0x4
+    volatile uint32_t CPAR;     //0x8
+    volatile uint32_t CMAR;     //0xC
+    uint32_t res1;      //0x10 dont access --> out of bounds for last
 } DMA_channel_map;
 
 // DMA1 and 2 including repeated channel structure
@@ -259,10 +274,11 @@ typedef struct
     volatile uint32_t ISR;      // DMA interrupt status register
     volatile uint32_t IFCR;     // DMA interrupt flag clear register
 
-    volatile DMA_channel_map CH[7];     //starting at 0x008, 0x01C, 0x030...
+    DMA_channel_map CH[7];     //starting at 0x008, 0x01C, 0x030...    THIS is an array
 } DMA_map;
 #define DMA1 ((DMA_map *) DMA1_REGS)
 #define DMA2 ((DMA_map *) DMA2_REGS)
+
 
 
 // FLASH
@@ -388,7 +404,7 @@ typedef struct
     volatile uint32_t    CFGR2;      //0x2C     Clock configuration register 2  (contains ADC prescalers)
     volatile uint32_t    CFGR3;      //0x30     Clock configuration register 3
 } RCC_map;
-#define RCC ((volatile RCC_map *) RCC_REGS)
+#define RCC ((volatile RCC_map *) RCC_REGS)     //RCC contains a POINTER!!!
 
 
 typedef struct
@@ -412,8 +428,6 @@ typedef struct
 //generate array for easier access!
 extern volatile SPI_map * const SPI[5];    //needs to be initialized
 
-#define CLKSPEED_HSI 8.0  //8MHz RC oscillator clock
-#define CLKSPEED_HSE 8.0  //8MHz ext osc clock
 
 
 #endif

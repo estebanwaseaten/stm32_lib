@@ -1,7 +1,7 @@
 MEMORY
 {
-	SRAM (xrw) : ORIGIN = 0x20000000, LENGTH = 64K
-	CCMSRAM (xrw) : ORIGIN = 0x10000000, LENGTH = 16K
+	SRAM (rw) : ORIGIN = 0x20000000, LENGTH = 64K
+	CCMSRAM (xr) : ORIGIN = 0x10000000, LENGTH = 16K	/* as code is executed from here we omit the write flag for security reasons */
 	/*FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 64K*/
 }
 

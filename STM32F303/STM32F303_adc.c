@@ -26,123 +26,91 @@ volatile ADC_common_map * const ADC_common[5] = {
  * AHB3 should be clocked
  */
 
-void ADC_init( void )
+
+void ADC_init( uint32_t ADCnum )
 {
     GPIO_init();    //just to make sure
 
-    //enable ADC clock for both ADCs (bits 28 and 29 for ADC1/2 and ADC3/4) --> RCC clock up to 72MHz
-    SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
-    SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
-    (void)RCC->AHBENR;             // read-back to flush/ensure clock gate opened
-    //waitCycles( 4 );
-}
-
-int ADC_enable( uint32_t ADCnum )
-{
-    switch ( ADCnum )
+    //start ADC clocks
+    if( (ADCnum == 1) || (ADCnum == 2) )
     {
-        case 1:
-            //config input in analog mode:
-            SETBITS( GPIOA->MODER, 0x3, 0*2 );      // PA0 alternate function (analog mode)
-            SETBITS( GPIOA->MODER, 0x3, 1*2 );      // PA1 alternate function (analog mode)
-            SETBITS( GPIOA->MODER, 0x3, 2*2 );      // PA2 alternate function (analog mode)
-
-            CLRBITS( GPIOA->PUPDR, 0x3, 0*2 );      // no pull no push
-            CLRBITS( GPIOA->PUPDR, 0x3, 1*2 );
-            CLRBITS( GPIOA->PUPDR, 0x3, 2*2 );
-
-
-            CLRWRD( ADC1_2_COMMON->CCR );
-
-            //enable ADC voltage regulator if not on.
-            if( !CHKBIT( ADC1->CR, 28 ) )
-            {
-                CLRBITS( ADC1->CR, 0x3, 28 );   //reset ADVREGEN[1:0] = 00
-                SETBIT( ADC1->CR, 28 );         //enable voltage regulator ADVREGEN[1:0] = 01
-                waitCycles(10000000);    //enough?
-
-            }
-
-            //ADD CALIBRATION:
-        	CLRBIT( ADC1->CR, 30 );		// ADCALDIF=0 for single ended cal
-        	//SETBIT( ADC1->CR, 30 );	// ADCALDIF=1 for differential cal
-        	SETBIT( ADC1->CR, 31 ); 	// ADCAL=1 to start cal
-        	// wait until ADCAL is zero again
-        	while( CHKBIT( ADC1->CR, 31 ) )
-            {
-                __asm("nop");
-            }
-            waitCycles(4);
-
-            //some stuff needs to be set before AD is enabled!!
-            //SETBIT( ADC1->DIFSEL, 1 );
-            CLRBIT( ADC1->DIFSEL, 1 );
-
-            //enable ADC
-            SETBIT( ADC1->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;    "ADEN"
-            while( !CHKBIT( ADC1->ISR, 0 ) )    //ISR register bit 0 is the ready flag
-            {
-                __asm("nop");
-            }
-
-            CLRBITS( ADC1->CFGR, 0x3, 10 );         //EXTEN = 0 --> software trigger by setting ADSTART
-            CLRWRD( ADC1->SQR1 );                   //clear sequence -> sequence-length = 1 conversion
-            SETBITS( ADC1->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence
-            //SETBITS( ADC1->SQR1, 0x2 , 6 );       //select channel 2 for 1st conversion in regular sequence
-            CLRWRD( ADC1->SQR2 );
-            CLRWRD( ADC1->SQR3 );
-            CLRWRD( ADC1->SQR4 );
-
-            CLRWRD( ADC1->SMPR1 );              //fastest sample time
-            SETBITS( ADC1->SMPR1, 0x3, 3 );     //slower sample time
-            SETBITS( ADC1->SMPR1, 0x3, 6 );     //slower sample time
-
-            CLRBIT( ADC1->CFGR, 16 );           // discontinuous mode for regular channels disabled DISCEN = 0
-            CLRBIT( ADC1->CFGR, 13 );           // single conversion mode CONT = 0
-
-            //start conversion with ADSTART=1: ADC1->CR |= 4;
-            // The converted data are stored into the 16-bit ADCx_DR register
-            // The EOC (end of regular conversion) flag is set
-            // After the regular sequence is complete: The EOS (end of regular sequence) flag is set
-            // To convert a single channel, program a sequence with a length of 1.
-
-            break;
-        case 2:
-            ADC1_2_COMMON->CCR &= 0x30000;  //unset bits 17&16
-            if( !CHKBIT( ADC2->CR, 28 ) )
-            {   //enable voltage regulator if not on.
-                ADC2->CR &= 0xCFFFFFFF; //reset
-                ADC2->CR = (1 << 28);
-            }
-            break;
-        case 3:
-            ADC3_4_COMMON->CCR &= 0x30000;  //unset bits 17&16
-            if( !CHKBIT( ADC2->CR, 28 ) )
-            {   //enable voltage regulator if not on.
-
-                ADC3->CR &= 0xCFFFFFFF; //reset
-                ADC3->CR = (1 << 28);
-            }
-            break;
-        case 4:
-            ADC3_4_COMMON->CCR &= 0x30000;  //unset bits 17&16
-            if( !CHKBIT( ADC2->CR, 28 ) )
-            {   //enable voltage regulator if not on.
-
-                ADC4->CR &= 0xCFFFFFFF; //reset
-                ADC4->CR = (1 << 28);
-            }
-            break;
-        default:
-            return -1;
+        SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
+        (void)RCC->AHBENR;             // read-back to flush/ensure clock gate opened
+        CLRWRD( ADC_common[1]->CCR );      //reset comon control register for ADC 1 and 2
     }
-    return 0;
+    else if( (ADCnum == 3) || (ADCnum == 4) )
+    {
+        SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
+        (void)RCC->AHBENR;             // read-back to flush/ensure clock gate opened
+        CLRWRD( ADC_common[3]->CCR );      //reset comon control register for ADC 1 and 2
+    }
+
+    //start voltage regulator:
+    if( !CHKBIT( ADC[ADCnum]->CR, 28 ) )
+    {
+        CLRBITS( ADC[ADCnum]->CR, 0x3, 28 );   //reset ADVREGEN[1:0] = 00
+        SETBIT( ADC[ADCnum]->CR, 28 );         //enable voltage regulator ADVREGEN[1:0] = 01
+        waitCycles(10000000);                  //enough?
+    }
+
+    //make sure it is off
+    CLRBIT( ADC[ADCnum]->CR, 0 );
+    (void)ADC[ADCnum]->CR;
+
+    //calibrate:
+    CLRBIT( ADC[ADCnum]->CR, 30 );	    // ADCALDIF=0 for single ended cal
+    //	SETBIT( ADC1->CR, 30 );	        // ADCALDIF=1 for differential cal
+    SETBIT( ADC[ADCnum]->CR, 31 ); 	    // ADCAL=1 to start cal
+    // wait until ADCAL is zero again:
+    while( CHKBIT( ADC[ADCnum]->CR, 31 ) )
+    {
+        __asm("nop");
+    }
+    waitCycles(4);
 }
 
-uint16_t ADC_read_single( uint32_t ADCnum )
+void ADC_setup( void )
+{
+    SETBITS( GPIOA->MODER, 0x3, 0*2 );      // PA0 alternate function (analog mode)
+    CLRBITS( GPIOA->PUPDR, 0x3, 0*2 );      // no pull no push
+
+    //some stuff needs to be set before ADC is enabled!!
+    CLRBIT( ADC[1]->DIFSEL, 1 );       //differential mode off
+    CLRBIT( ADC[1]->DIFSEL, 2 );       //differential mode off
+
+    //enable ADC
+    SETBIT( ADC[1]->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;    "ADEN"
+    while( !CHKBIT( ADC[1]->ISR, 0 ) )    //ISR register bit 0 is the ready flag
+    {
+        __asm("nop");
+    }
+
+    //setup of triggering scheme and DMA
+    CLRWRD( ADC[1]->CFGR );
+    SETBIT( ADC[1]->CFGR, 10 );            //EXTEN -> hardware trigger detection on rising edge enabled
+    SETBITS( ADC[1]->CFGR, 0xB, 6 );       //EXTSEL = 0b1011 = 0xB TIM2_TRGO event triggers conversion!                 SELECT TIMER TIM2
+    SETBIT( ADC[1]->CFGR, 0 );             // enable DMA - in dual ADC mode ADC[x]->CCR: MDMA bits are relevant         ENABLE DMA
+
+    CLRWRD( ADC[1]->SQR1 );                //clear sequence -> sequence-length = 1 conversion
+    CLRWRD( ADC[1]->SQR2 );
+    CLRWRD( ADC[1]->SQR3 );
+    CLRWRD( ADC[1]->SQR4 );
+    SETBITS( ADC[1]->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence (do I need this?)
+
+    CLRWRD( ADC[1]->SMPR1 );              //fastest sample time
+    SETBITS( ADC[1]->SMPR1, 0x5, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
+}
+
+
+
+
+
+
+
+//not really needed anymore
+uint16_t ADC_read_single( uint32_t ADCnum )     //seems to read out the previous acquisition though...
 {
     //Software starts ADC regular conversions by setting ADSTART=1; immediately: if EXTEN = 0x0 (software trigger)
-
     SETBIT( ADC1->CR, 2 );              //ADC start regular conversion  ADSTART
 
     while( !CHKBIT( ADC1->ISR, 3 ) )    //conversion not complete 3 = EOS, 2 = EOC

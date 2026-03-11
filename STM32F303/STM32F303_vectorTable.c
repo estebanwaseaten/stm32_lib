@@ -56,10 +56,39 @@ void Default_Handler( void )
 	main();
 }
 
+void setHandler_DMA( uint32_t dma, uint32_t channel, isr_t fn )
+{
+	if( dma == 1 )			//DMA1 ch 1: 11 (18 - 1 + 1)
+	{
+		isr_vectors[16 + DMA1_CH1_IRQ - 1 + channel] = ((uint32_t)fn) | 1u;
+	}
+	else if( dma == 2 )
+	{
+		isr_vectors[16 + DMA2_CH1_IRQ - 1 + channel] = ((uint32_t)fn) | 1u;
+	}
+}
+
+void setHandler_ADC( uint32_t adcnum, isr_t fn )
+{
+	if( (adcnum == 1) || (adcnum == 2) )
+	{
+		isr_vectors[16 + ADC1_2_IRQ] = ((uint32_t)fn) | 1u;
+	}
+	else if( adcnum == 3 )
+	{
+		isr_vectors[16 + ADC3_IRQ] = ((uint32_t)fn) | 1u;
+	}
+	else if( adcnum == 4 )
+	{
+		isr_vectors[16 + ADC4_IRQ] = ((uint32_t)fn) | 1u;
+	}
+}
+
+
 void setHandler_SysTick( isr_t fn )		//should be called every ms?
 {
 	isr_vectors[16 - 1] =  ((uint32_t)fn) | 1u; // cast + Thumb bit;
-	//also enable interrupt?
+	//priority??
 }
 
 void setHandler_SPI1( isr_t fn )

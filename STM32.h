@@ -57,11 +57,30 @@ void CLOCK_start_HSI( void );
 void CLOCK_start_HSE( void );
 void CLOCK_start_PLL( uint32_t pllSource );
 
-void CLOCK_enable_sysTick( uint32_t clockSpeed );
-
-
 uint32_t CLOCK_get_sysClk( void );
 uint32_t CLOCK_get_pllClk( void );
+uint32_t CLOCK_get_AHB( void );
+uint32_t CLOCK_get_PCLK1( void );
+uint32_t CLOCK_get_PCLK2( void );
+
+//systick
+void SYSTICK_enable( uint32_t clockSpeed );
+uint32_t SYSTICK_get_ms();
+uint32_t SYSTICK_get_us();
+uint32_t SYSTICK_get_ticks_raw();
+
+//TIMERS
+//per timer:
+uint32_t TIMER2_getcount( void );
+void TIMER2_clear_interrupt( void );
+void TIMER2_setup( uint32_t us_between );
+
+//general
+void TIMER_init( uint32_t tim, bool pllSrc );
+void TIMER_enable( uint32_t tim, uint32_t divider, bool pllSrc );
+void TIMER2_start();
+void TIMER2_stop();
+void TIMER2_disable();
 
 
 //GPIO
@@ -72,8 +91,12 @@ void GPIO_unset( uint32_t pin );
 int GPIO_get( uint32_t pin );
 
 //ADC
-void ADC_init( void );
-int ADC_enable( uint32_t ADCnum );
+void ADC_init( uint32_t ADCnum );
+void ADC_setup( void );
+void ADC_enable( uint32_t ADCnum, bool manual );
+void ADC_arm( uint32_t ADCnum );
+void ADC_disarm( uint32_t ADCnum );
+
 int ADC_disable( uint32_t ADCnum );
 uint16_t ADC_read_single( uint32_t ADCnum );
 
@@ -91,15 +114,20 @@ int SPI_receive( void );
 int SPI_send( uint16_t data );
 
 //DMA
-void DMA_init( void );
+void DMA_init( bool dma1, bool dma2 );
+void DMA_setup( void );
+void DMA_reset( uint32_t DMAnum, uint32_t dma_channel );
 
-//TIMERS
-uint32_t TIMER_getcount( uint32_t tim );
-void TIMER_clear_interrupt( uint32_t tim );
-void TIMER_init( void );
-void TIMER_enable( uint32_t tim, uint32_t divider, bool pllSrc );
-void TIMER_start( uint32_t tim );
-void TIMER_disable( uint32_t tim );
+void DMA_enable_interrupt( uint32_t DMAnum, uint32_t dma_channel );
+void DMA_enable( uint32_t dma_num, uint32_t dma_channel );
+void DMA_setup( void );
+
+void DMA_clear_interrupts( uint32_t DMAnum );
+
+//DAQ subroutines
+void DAQ1_setup( void );
+void DAQ1_start( void );
+void DAQ1_stop( void );
 
 
 // for setting custom handlers (implement as needed)
@@ -109,6 +137,8 @@ void setHandler_SPI1( isr_t fn );
 void setHandler_TIM2( isr_t fn );   //general purpose timer
 void setHandler_TIM3( isr_t fn );   //general purpose timer
 void setHandler_TIM4( isr_t fn );   //general purpose timer
+void setHandler_DMA( uint32_t dma, uint32_t channel, isr_t fn );
+void setHandler_ADC( uint32_t adcnum, isr_t fn );
 
 
 #endif

@@ -16,7 +16,6 @@ void GPIO_init( void )
     //enable clocks
     SETBIT( RCC->AHBENR, 17 );      //set GPIOA enabled
     SETBIT( RCC->AHBENR, 18 );      //set GPIOB enabled
-
     (void)RCC->AHBENR;  // read-back to flush/ensure clock gate opened
 
     initialized = true;
