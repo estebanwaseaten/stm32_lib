@@ -30,7 +30,7 @@ void DMA_init( bool dma1, bool dma2 )
     }
 }
 
-void DMA_setup( void )      //should be less specific?
+void DMA_setup( bool dual )      //should be less specific?
 {
     gDataLength = 64;
     gMemBase = 0x20000004;
@@ -39,14 +39,32 @@ void DMA_setup( void )      //should be less specific?
     (void)DMA1->CH[0].CCR;          //read back
 
     SETBITS( DMA1->CH[0].CCR, 0x3, 12 );     // set priority to very high
-    SETBITS( DMA1->CH[0].CCR, 0x1, 10 );     // set MSIZE to 16bits
-    SETBITS( DMA1->CH[0].CCR, 0x1, 8 );      // set PSIZE to 16bits
+    if( dual )
+    {
+        SETBITS( DMA1->CH[0].CCR, 0x2, 10 );     // set MSIZE to 32bits
+        SETBITS( DMA1->CH[0].CCR, 0x2, 8 );      // set PSIZE to 32bits
+    }
+    else
+    {
+        SETBITS( DMA1->CH[0].CCR, 0x1, 10 );     // set MSIZE to 16bits
+        SETBITS( DMA1->CH[0].CCR, 0x1, 8 );      // set PSIZE to 16bits
+    }
+
     SETBIT( DMA1->CH[0].CCR, 7 );            // set Memory Increment Mode
     //SETBIT( DMA1->CH[0].CCR, 5)            // DO NOT set circular mode
     SETBIT( DMA1->CH[0].CCR, 1 );            // set transfer complete interrupt enable
 
     //setup datatransfer scheme
-    SETWRD( DMA1->CH[0].CPAR, (uint32_t)&ADC1->DR );           //SOURCE: peripheral address
+
+    if( dual )
+    {
+        SETWRD( DMA1->CH[0].CPAR, (uint32_t)&ADC1_2_COMMON->CDR );           //SOURCE: peripheral address
+    }
+    else
+    {
+        SETWRD( DMA1->CH[0].CPAR, (uint32_t)&ADC1->DR );           //SOURCE: peripheral address
+    }
+
     SETWRD( DMA1->CH[0].CMAR, gMemBase );                      //DESTINATION: memory start address
     SETWRD( DMA1->CH[0].CNDTR, gDataLength );                  //number of data transfers
 }

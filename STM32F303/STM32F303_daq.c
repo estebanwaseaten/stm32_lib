@@ -24,7 +24,7 @@ uint32_t gMemBase = 0x20000004;
 // 3. DMA enable
 // 4. TIM2 configuration
 //clocks need to be enabled before
-void DAQ1_setup( void )
+void DAQ12_setup( void )
 {
 
     // init prepares everything in an arbitrary way
@@ -34,41 +34,46 @@ void DAQ1_setup( void )
 	DMA_init( true, true );             //init both DMA channels
 	ADC_init( 1 );			   // enables clocks and voltage regulator and does calibration
     ADC_init( 2 );
-    ADC_init( 3 );
-    ADC_init( 4 );
+    //ADC_init( 3 );
+    //ADC_init( 4 );
 
     TIMER_init( 2, true );		//init timer 2 with PLL
 
 
-    //DMA circular or cont
+    //DMA circular or cont	--> depends on HW or SW Trigger
 
-    //DMA setup:
-    DMA_setup();             //specific for this DAQ (should probaly map the ADC to channel and memory...)
+    //DMA setup:	(uses gDataLength)
+    DMA_setup( true );             //specific for this DAQ (should probaly map the ADC to channel and memory...)
     //ADC setup:
-    ADC_setup();             //enables DMA and only afterwards DMA can be enabled
-    TIMER2_setup( 1 );	     //1 us between each acquisition
+    //ADC_setup( 0x3 );             //enables DMA and only afterwards DMA can be enabled
+	ADC12_setup_dual();
 
-    //AFTER configuring ADC we can enable DMA otherwise there is a problem
-    DMA_enable_interrupt( 1, 1 );
+	TIMER2_setup( 1 );	     //1 us between each acquisition
+
+    // AFTER configuring ADC we can enable DMA otherwise there is a problem
+	// do we need to enable more than one interrupt?
+    DMA_enable_interrupt( 1, 1 );		//one interrupt per ADC dual pair
 	DMA_enable( 1, 1 );
-
-	//TIMER
+	//	DMA_enable( 2, 1 );	not needed in dual mode
 
 }
 
-
-void DAQ1_start( void )
+// ADC1->DMA1CH1, (ADC2->DMA2CH1), ADC3->DMA2CH5, (ADC4->DMA2CH2) dual mode only uses the ADC-master DMA channels
+void DAQ12_start( void )
 {
     //reload DMA:
     DMA_reset( 1, 1 );     //reset DMA (especially the counter CNDTR)
+	//DMA_reset( 2, 1 ); DMA2,1 is not used in DUAL mode
 
     SETBIT( ADC[1]->ISR, 4 );      // clear OVR flag just in case
+	SETBIT( ADC[2]->ISR, 4 );      // clear OVR flag just in case
     SETBIT( ADC[1]->CR, 2 );       // ADC armed --> TRGO starts conversion
+	SETBIT( ADC[2]->CR, 2 );       // ADC armed --> TRGO starts conversion
 
-    TIMER2_start();		//works
+    TIMER2_start();		//works - always start timer LAST!!! (so all the ADCs start in sync)
 }
 
-void DAQ1_stop( void )
+void DAQ12_stop( void )
 {
     TIMER2_stop();       //CLRBIT( TIM2->CR1, 0 );
 
@@ -79,6 +84,13 @@ void DAQ1_stop( void )
         __asm("nop");
     }
     SETBIT( ADC[1]->ISR, 4 );      //clear OVR flag just in case
+
+	SETBIT( ADC[2]->CR, 4 );       //ADSTP = 1
+    while( CHKBIT( ADC[2]->CR, 4 ) )
+    {
+        __asm("nop");
+    }
+	SETBIT( ADC[2]->ISR, 4 );
 
     //TCIF löschen
     //SETWRD( DMA1->IFCR, 0xFFFFFFFF );

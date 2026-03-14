@@ -69,14 +69,33 @@ void ADC_init( uint32_t ADCnum )
     waitCycles(4);
 }
 
-void ADC_setup( void )
+void ADC_setup( uint32_t ADCnum )
+{
+
+}
+
+// ADC1 --> PA0 (ADC1_IN1)      (1-5 = fast channels)       // EXTSEL  = 1011 TIM2 reg          -- exists on nucleo board
+// ADC2 --> PA4 (ADC2_IN1)      (1-5 = fast channels)       // EXTEN/EXTSEL only in master      -- exists on nucleo board
+// ADC3 --> PB1 (ADC3_IN1)                                  // EXTSEL  = 0111 TIM2 reg          -- exists on nucleo board
+// ADC4 --> PB12(ADC4_IN3)/PB14(ADC4_IN4)/PB15(ADC4_IN5)    // EXTEN/EXTSEL only in master      -- PB12, 14, 15 exist on nucleo board (righmost morpho connector)
+// ADC 4: PE14, PE15, PB12, PB14, PB15
+// DUAL ADC MODE: ADCx_CCR:DUAL --> regular simultaneous mode   //CONT, AUTDLY, DISCEN, DISCNUM[2:0], JDISCEN, JQM, JAUTO only need to be set in master
+// read from ADC common data register though!!  --> set that in DMA!!!
+// status from ADC common status reg ADCx_CSR... dual or not dual.
+void ADC12_setup_dual( void )
 {
     SETBITS( GPIOA->MODER, 0x3, 0*2 );      // PA0 alternate function (analog mode)
     CLRBITS( GPIOA->PUPDR, 0x3, 0*2 );      // no pull no push
 
+    SETBITS( GPIOA->MODER, 0x3, 4*2 );      // PA4 alternate function (analog mode)
+    CLRBITS( GPIOA->PUPDR, 0x3, 4*2 );      // no pull no push
+
     //some stuff needs to be set before ADC is enabled!!
     CLRBIT( ADC[1]->DIFSEL, 1 );       //differential mode off
     CLRBIT( ADC[1]->DIFSEL, 2 );       //differential mode off
+
+    CLRBIT( ADC[2]->DIFSEL, 1 );       //differential mode off
+    CLRBIT( ADC[2]->DIFSEL, 2 );       //differential mode off
 
     //enable ADC
     SETBIT( ADC[1]->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;    "ADEN"
@@ -85,20 +104,43 @@ void ADC_setup( void )
         __asm("nop");
     }
 
-    //setup of triggering scheme and DMA
+    SETBIT( ADC[2]->CR, 0 );              // enable adc ADC1->CR |= 2; to disable;    "ADEN"
+    while( !CHKBIT( ADC[2]->ISR, 0 ) )    //ISR register bit 0 is the ready flag
+    {
+        __asm("nop");
+    }
+
+    //setup of triggering scheme and DMA --> only for master
     CLRWRD( ADC[1]->CFGR );
     SETBIT( ADC[1]->CFGR, 10 );            //EXTEN -> hardware trigger detection on rising edge enabled
     SETBITS( ADC[1]->CFGR, 0xB, 6 );       //EXTSEL = 0b1011 = 0xB TIM2_TRGO event triggers conversion!                 SELECT TIMER TIM2
+
+    //single mode (ignored in dual mode):
     SETBIT( ADC[1]->CFGR, 0 );             // enable DMA - in dual ADC mode ADC[x]->CCR: MDMA bits are relevant         ENABLE DMA
+    //dual mode:
+    SETBITS( ADC1_2_COMMON->CCR, 0x2, 14 );         //MDMA set to 0b10 = 12 and 10 bits
+    CLRBIT( ADC1_2_COMMON->CCR, 13 );               //DMA one shot mode
+    SETBITS( ADC1_2_COMMON->CCR, 0x6, 0 );          // regular simultaneous mode only
+
 
     CLRWRD( ADC[1]->SQR1 );                //clear sequence -> sequence-length = 1 conversion
     CLRWRD( ADC[1]->SQR2 );
     CLRWRD( ADC[1]->SQR3 );
     CLRWRD( ADC[1]->SQR4 );
+
+    CLRWRD( ADC[2]->SQR1 );                //clear sequence -> sequence-length = 1 conversion
+    CLRWRD( ADC[2]->SQR2 );
+    CLRWRD( ADC[2]->SQR3 );
+    CLRWRD( ADC[2]->SQR4 );
+
     SETBITS( ADC[1]->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence (do I need this?)
+    SETBITS( ADC[2]->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence (do I need this?)
 
     CLRWRD( ADC[1]->SMPR1 );              //fastest sample time
     SETBITS( ADC[1]->SMPR1, 0x5, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
+
+    CLRWRD( ADC[2]->SMPR1 );              //fastest sample time
+    SETBITS( ADC[2]->SMPR1, 0x5, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
 }
 
 

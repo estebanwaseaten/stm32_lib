@@ -36,11 +36,14 @@ enum gpio_pin_functions
 #define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
 #define SETWRD( reg, word ) ((reg) = (word))
 
+
 #define CLRBIT( reg, bit ) ((reg) &= ~(1U << (bit)))
 #define CLRBITS( reg, bits, shift ) ((reg) &= ~((bits) << (shift)))
 #define CLRWRD( reg ) ((reg) = 0x0)
 
+
 #define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
+
 
 //MISC
 uint32_t getWord( uint32_t addr );
@@ -92,7 +95,8 @@ int GPIO_get( uint32_t pin );
 
 //ADC
 void ADC_init( uint32_t ADCnum );
-void ADC_setup( void );
+void ADC_setup( uint32_t ADCnum );
+void ADC12_setup_dual( void );
 void ADC_enable( uint32_t ADCnum, bool manual );
 void ADC_arm( uint32_t ADCnum );
 void ADC_disarm( uint32_t ADCnum );
@@ -115,19 +119,19 @@ int SPI_send( uint16_t data );
 
 //DMA
 void DMA_init( bool dma1, bool dma2 );
-void DMA_setup( void );
+void DMA_setup( bool dual );
 void DMA_reset( uint32_t DMAnum, uint32_t dma_channel );
 
 void DMA_enable_interrupt( uint32_t DMAnum, uint32_t dma_channel );
 void DMA_enable( uint32_t dma_num, uint32_t dma_channel );
-void DMA_setup( void );
+//void DMA_setup( void );
 
 void DMA_clear_interrupts( uint32_t DMAnum );
 
 //DAQ subroutines
-void DAQ1_setup( void );
-void DAQ1_start( void );
-void DAQ1_stop( void );
+void DAQ12_setup( void );
+void DAQ12_start( void );
+void DAQ12_stop( void );
 
 
 // for setting custom handlers (implement as needed)
