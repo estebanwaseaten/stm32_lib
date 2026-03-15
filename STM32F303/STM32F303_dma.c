@@ -30,7 +30,7 @@ void DMA_init( bool dma1, bool dma2 )
     }
 }
 
-void DMA_setup( bool dual )      //should be less specific?
+void DMA_setup( bool dual )      //should be less specific?, DMA 1 or 2, channel?...
 {
     gDataLength = 64;
     gMemBase = 0x20000004;

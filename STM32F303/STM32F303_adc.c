@@ -82,7 +82,7 @@ void ADC_setup( uint32_t ADCnum )
 // DUAL ADC MODE: ADCx_CCR:DUAL --> regular simultaneous mode   //CONT, AUTDLY, DISCEN, DISCNUM[2:0], JDISCEN, JQM, JAUTO only need to be set in master
 // read from ADC common data register though!!  --> set that in DMA!!!
 // status from ADC common status reg ADCx_CSR... dual or not dual.
-void ADC12_setup_dual( void )
+void ADC12_setup_dual( void )   //pin select?
 {
     SETBITS( GPIOA->MODER, 0x3, 0*2 );      // PA0 alternate function (analog mode)
     CLRBITS( GPIOA->PUPDR, 0x3, 0*2 );      // no pull no push
@@ -149,7 +149,7 @@ void ADC12_setup_dual( void )
 
 
 
-//not really needed anymore
+//not really needed anymore --> reading done via DMA
 uint16_t ADC_read_single( uint32_t ADCnum )     //seems to read out the previous acquisition though...
 {
     //Software starts ADC regular conversions by setting ADSTART=1; immediately: if EXTEN = 0x0 (software trigger)

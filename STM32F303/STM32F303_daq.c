@@ -39,7 +39,6 @@ void DAQ12_setup( void )
 
     TIMER_init( 2, true );		//init timer 2 with PLL
 
-
     //DMA circular or cont	--> depends on HW or SW Trigger
 
     //DMA setup:	(uses gDataLength)
@@ -55,6 +54,20 @@ void DAQ12_setup( void )
     DMA_enable_interrupt( 1, 1 );		//one interrupt per ADC dual pair
 	DMA_enable( 1, 1 );
 	//	DMA_enable( 2, 1 );	not needed in dual mode
+
+}
+
+void DAQ_changeTimebase( uint32_t timebase )
+{
+	//changer Timer2 settings
+
+
+}
+
+void DAQ_changeDatapoints( uint32_t datapoints )
+{
+	//change DMA settings --> gDataLength
+
 
 }
 
