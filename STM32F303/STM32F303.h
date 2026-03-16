@@ -1,7 +1,7 @@
 // header with STM32F303 specific stuff...
 //
 
-
+#include "STM32F303RE.h"        //if??
 
 #ifndef STM32F303_H
 #define STM32F303_H

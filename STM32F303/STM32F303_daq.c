@@ -14,9 +14,19 @@
 //ADC3 --> DMA2_CH5
 //ADC4 --> DMA2_CH4
 
-uint32_t gDataLength = 64;
-uint32_t gMemBase = 0x20000004;
 
+
+uint32_t gLastTriggerEvent = 0;		// record DMA pos of last trigger event. Check if there is enough datapoints after 1/2- and 1-DMA interrupt
+uint32_t gDataLength = 100;			// --> circular buffer 200
+
+inline void setLastTriggerEvent( uint32_t dmaPos )
+{
+	gLastTriggerEvent = dmaPos;
+}
+inline uint32_t getLastTriggerEvent( void )
+{
+	return gLastTriggerEvent;
+}
 
 //correct order
 // 1. DMA config (NOT ENABLE!)
@@ -57,17 +67,39 @@ void DAQ12_setup( void )
 
 }
 
+
+//changing timebase or buffer size --> always reset DMA and all variables so
 void DAQ_changeTimebase( uint32_t timebase )
 {
-	//changer Timer2 settings
+	//changer Timer2 settings (also maybe start from zero in the dma... --> dma needs to be reset too)
+	//always check ADC is stopped and done before disabling DMA!!!
 
+	//maybe also need to change ADC settings if the DAQ would be too slow?
+	// optimize: DAQ as long as possible for given timebase
 
 }
 
-void DAQ_changeDatapoints( uint32_t datapoints )
+void DAQ_changeBufferSize( uint32_t datapoints )
 {
 	//change DMA settings --> gDataLength
+	//stop timer
+	//stop ADC //always check ADC is stopped and done before disabling DMA!!!
+	//disable DMA
+		//change DMA settings
+	//enable DMA
+	//enable ADC
+	//restart timer
+}
 
+//after trigger event when the measuremen is done. stop timer:
+void DAQ12_pause( void )
+{
+
+}
+
+//after data is read and resume command is issued. restart timer:
+void DAQ12_resume( void )
+{
 
 }
 

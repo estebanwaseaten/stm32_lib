@@ -10,7 +10,7 @@
 // ADC4 -> DMA2 ch2
 
 extern uint32_t gDataLength;
-extern uint32_t gMemBase;
+
 
 //init clocks and reset interrupts
 void DMA_init( bool dma1, bool dma2 )
@@ -32,9 +32,6 @@ void DMA_init( bool dma1, bool dma2 )
 
 void DMA_setup( bool dual )      //should be less specific?, DMA 1 or 2, channel?...
 {
-    gDataLength = 64;
-    gMemBase = 0x20000004;
-
     CLRWRD( DMA1->CH[0].CCR );      //disable DMA
     (void)DMA1->CH[0].CCR;          //read back
 
@@ -65,8 +62,12 @@ void DMA_setup( bool dual )      //should be less specific?, DMA 1 or 2, channel
         SETWRD( DMA1->CH[0].CPAR, (uint32_t)&ADC1->DR );           //SOURCE: peripheral address
     }
 
-    SETWRD( DMA1->CH[0].CMAR, gMemBase );                      //DESTINATION: memory start address
+
+    SETWRD( DMA1->CH[0].CMAR, MEMBASE12 );                      //DESTINATION: memory start address
     SETWRD( DMA1->CH[0].CNDTR, gDataLength );                  //number of data transfers
+    //second channel for ADCs 3 und 4
+    //SETWRD( DMA2->CH[0].CMAR, MEMBASE34 );                      //DESTINATION: memory start address
+    //SETWRD( DMA2->CH[0].CNDTR, gDataLength );
 }
 
 void DMA_reset( uint32_t DMAnum, uint32_t dma_channel )

@@ -130,6 +130,8 @@ void DMA_clear_interrupts( uint32_t DMAnum );
 
 //DAQ subroutines
 void DAQ12_setup( void );
+void DAQ12_pause( void );
+void DAQ12_resume( void );
 void DAQ12_start( void );
 void DAQ12_stop( void );
 
