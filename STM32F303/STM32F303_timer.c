@@ -43,6 +43,8 @@ void TIMER2_setup( uint32_t us_between )    // timer is supposed to fire a TRGO 
         clockRate = CLOCK_get_PCLK2();
     }
 
+    setWord( 0x20009004, clockRate );
+
     // timer can tick at clock rate or slower
     // if this number is too big, we could always set the pre-scaler...
     uint32_t countTo = clockRate/1000000 * us_between; //(in us)
