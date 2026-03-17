@@ -66,20 +66,19 @@ void TIMER2_setup( uint32_t us_between )    // timer is supposed to fire a TRGO 
 void TIMER2_start()
 {
     SETWRD( TIM2->SR, 0x0 );    // clear UIF
+    SETWRD( TIM2->CNT, 0x0 );
     SETBIT( TIM2->CR1, 0 );     // enable counter
 }
 
 void TIMER2_stop()      //Immediately stop TIM2 (CEN=0) or clear EXTEN=0.
 {
     CLRBIT( TIM2->CR1, 0 );     // disable counter
-
-    //CLRBIT( TIM2->DIER, 0 );
-    //CLRBIT( TIM2->CR1, 0 );
-    //SETWRD( TIM2->SR, 0x0 );    // clear UIF
 }
 
-
-
+void TIMER2_resume()    //?
+{
+    SETBIT( TIM2->CR1, 0 );     // enable counter
+}
 
 
 

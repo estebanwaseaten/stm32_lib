@@ -9,8 +9,8 @@
 // ADC3 -> DMA2 ch5
 // ADC4 -> DMA2 ch2
 
-extern uint32_t gDataLength;
-
+uint32_t    gDMAbufferLength;
+bool        gCircular;
 
 //init clocks and reset interrupts
 void DMA_init( bool dma1, bool dma2 )
@@ -30,44 +30,47 @@ void DMA_init( bool dma1, bool dma2 )
     }
 }
 
-void DMA_setup( bool dual )      //should be less specific?, DMA 1 or 2, channel?...
+void DMA_setup_peri( uint32_t dma, uint32_t chan, volatile uint32_t *sourceAddr, uint32_t *destAddr, uint32_t bitSize, bool circ, uint32_t bufferLength )      //should be less specific?, DMA 1 or 2, channel?...
 {
-    CLRWRD( DMA1->CH[0].CCR );      //disable DMA
-    (void)DMA1->CH[0].CCR;          //read back
+    gDMAbufferLength = bufferLength;
+    gCircular = circ;
+    chan--;
 
-    SETBITS( DMA1->CH[0].CCR, 0x3, 12 );     // set priority to very high
-    if( dual )
-    {
-        SETBITS( DMA1->CH[0].CCR, 0x2, 10 );     // set MSIZE to 32bits
-        SETBITS( DMA1->CH[0].CCR, 0x2, 8 );      // set PSIZE to 32bits
-    }
-    else
-    {
-        SETBITS( DMA1->CH[0].CCR, 0x1, 10 );     // set MSIZE to 16bits
-        SETBITS( DMA1->CH[0].CCR, 0x1, 8 );      // set PSIZE to 16bits
-    }
+    DMA_map *currentDMA = DMA1;
+    if( dma == 2 )
+    currentDMA = DMA2;
 
-    SETBIT( DMA1->CH[0].CCR, 7 );            // set Memory Increment Mode
-    //SETBIT( DMA1->CH[0].CCR, 5)            // DO NOT set circular mode
-    SETBIT( DMA1->CH[0].CCR, 1 );            // set transfer complete interrupt enable
+    CLRWRD( currentDMA->CH[chan].CCR );      //disable DMA
+    (void)currentDMA->CH[chan].CCR;          //read back
+
+    SETBITS( currentDMA->CH[chan].CCR, 0x3, 12 );     // set priority to very high
+    if( bitSize == 32 )
+    {
+        SETBITS( currentDMA->CH[chan].CCR, 0x2, 10 );     // set MSIZE to 32bits
+        SETBITS( currentDMA->CH[chan].CCR, 0x2, 8 );      // set PSIZE to 32bits
+    }
+    else if( bitSize == 16 )
+    {
+        SETBITS( currentDMA->CH[chan].CCR, 0x1, 10 );     // set MSIZE to 16bits
+        SETBITS( currentDMA->CH[chan].CCR, 0x1, 8 );      // set PSIZE to 16bits
+    }
+    //else if( bitSize == 8 )?
+
+    SETBIT( currentDMA->CH[chan].CCR, 7 );            // set Memory Increment Mode
+    if( circ )
+    {
+        SETBIT( currentDMA->CH[chan].CCR, 5);              // set circular mode
+    }
+    SETBIT( currentDMA->CH[chan].CCR, 1 );            // set transfer complete interrupt enable
+    SETBIT( currentDMA->CH[chan].CCR, 2 );            // set half transfer interrupt enable
 
     //setup datatransfer scheme
+    SETWRD( currentDMA->CH[chan].CPAR, (uint32_t)sourceAddr );
+    //(uint32_t)&ADC1_2_COMMON->CDR );          //SOURCE: peripheral address
+    //(uint32_t)&ADC1->DR );                    //SOURCE: peripheral address
 
-    if( dual )
-    {
-        SETWRD( DMA1->CH[0].CPAR, (uint32_t)&ADC1_2_COMMON->CDR );           //SOURCE: peripheral address
-    }
-    else
-    {
-        SETWRD( DMA1->CH[0].CPAR, (uint32_t)&ADC1->DR );           //SOURCE: peripheral address
-    }
-
-
-    SETWRD( DMA1->CH[0].CMAR, MEMBASE12 );                      //DESTINATION: memory start address
-    SETWRD( DMA1->CH[0].CNDTR, gDataLength );                  //number of data transfers
-    //second channel for ADCs 3 und 4
-    //SETWRD( DMA2->CH[0].CMAR, MEMBASE34 );                      //DESTINATION: memory start address
-    //SETWRD( DMA2->CH[0].CNDTR, gDataLength );
+    SETWRD( currentDMA->CH[chan].CMAR, (uint32_t)destAddr );                      //DESTINATION: memory start address
+    SETWRD( currentDMA->CH[chan].CNDTR, bufferLength );                  //number of data transfers
 }
 
 void DMA_reset( uint32_t DMAnum, uint32_t dma_channel )
@@ -77,13 +80,13 @@ void DMA_reset( uint32_t DMAnum, uint32_t dma_channel )
     {
         CLRBIT( DMA1->CH[chan].CCR, 0 );      //disable DMA
         (void)DMA1->CH[chan].CCR;          //read back
-        SETWRD( DMA1->CH[chan].CNDTR, gDataLength );
+        SETWRD( DMA1->CH[chan].CNDTR, gDMAbufferLength );
     }
     else if( DMAnum == 2 )
     {
         CLRBIT( DMA2->CH[chan].CCR, 0 );      //disable DMA
         (void)DMA2->CH[chan].CCR;          //read back
-        SETWRD( DMA2->CH[chan].CNDTR, gDataLength );
+        SETWRD( DMA2->CH[chan].CNDTR, gDMAbufferLength );
     }
 
     DMA_enable( DMAnum, dma_channel );
@@ -120,5 +123,8 @@ void DMA_enable_interrupt( uint32_t DMAnum, uint32_t dma_channel )
 
 void DMA_clear_interrupts( uint32_t DMAnum )
 {
-      SETWRD( DMA1->IFCR, 0xFFFFFFFF );
+    if( DMAnum == 1 )
+        SETWRD( DMA1->IFCR, 0xFFFFFFFF );
+    else if( DMAnum == 2)
+        SETWRD( DMA2->IFCR, 0xFFFFFFFF );
 }

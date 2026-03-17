@@ -32,6 +32,28 @@ enum gpio_pin_functions
     PIN_INPUT
 };
 
+//data acquisition (DAQ):
+#define CH1 0x1
+#define CH2 0x2
+#define CH3 0x4
+#define CH4 0x8
+
+enum trigger_modes
+{
+	TRIG_SOFTWARE,
+	TRIG_CH1,
+	TRIG_CH2,
+	TRIG_CH3,
+	TRIG_CH4,
+    TRIG_CH1_AUTO,
+	TRIG_CH2_AUTO,
+	TRIG_CH3_AUTO,
+	TRIG_CH4_AUTO
+};
+
+
+
+
 #define SETBIT( reg, bit ) ((reg) |= (1U << (bit)))
 #define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
 #define SETWRD( reg, word ) ((reg) = (word))
@@ -40,7 +62,6 @@ enum gpio_pin_functions
 #define CLRBIT( reg, bit ) ((reg) &= ~(1U << (bit)))
 #define CLRBITS( reg, bits, shift ) ((reg) &= ~((bits) << (shift)))
 #define CLRWRD( reg ) ((reg) = 0x0)
-
 
 #define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
 
@@ -119,7 +140,7 @@ int SPI_send( uint16_t data );
 
 //DMA
 void DMA_init( bool dma1, bool dma2 );
-void DMA_setup( bool dual );
+void DMA_setup_peri( uint32_t dma, uint32_t chan, volatile uint32_t *sourceAddr, uint32_t *destAddr, uint32_t bitSize, bool circ, uint32_t bufferLength );
 void DMA_reset( uint32_t DMAnum, uint32_t dma_channel );
 
 void DMA_enable_interrupt( uint32_t DMAnum, uint32_t dma_channel );
@@ -134,6 +155,10 @@ void DAQ12_pause( void );
 void DAQ12_resume( void );
 void DAQ12_start( void );
 void DAQ12_stop( void );
+
+void DAQ_currentFetchDone( void );
+void DAQ_prepFetch( uint32_t channel );
+
 
 
 // for setting custom handlers (implement as needed)

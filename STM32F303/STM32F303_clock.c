@@ -9,6 +9,9 @@
 #define CLKSPEED_HSE 8000000UL  //8MHz ext osc clock
 
 
+
+
+
 // initializes the clocks and waits until they are running
 void CLOCK_init( uint32_t sysClk )
 {

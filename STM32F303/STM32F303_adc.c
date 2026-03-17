@@ -115,11 +115,14 @@ void ADC12_setup_dual( void )   //pin select?
     SETBIT( ADC[1]->CFGR, 10 );            //EXTEN -> hardware trigger detection on rising edge enabled
     SETBITS( ADC[1]->CFGR, 0xB, 6 );       //EXTSEL = 0b1011 = 0xB TIM2_TRGO event triggers conversion!                 SELECT TIMER TIM2
 
+    SETBIT( ADC[1]->CFGR, 1 );             //DMACFG: 1: DMA Circular Mode selected  --> has to be set in COMMON->CCR for dual mode
+    //SETBIT( ADC[1]->CFGR, 13 );            //CONT set - not needed because TIM2 should do the triggering
+
     //single mode (ignored in dual mode):
     SETBIT( ADC[1]->CFGR, 0 );             // enable DMA - in dual ADC mode ADC[x]->CCR: MDMA bits are relevant         ENABLE DMA
     //dual mode:
     SETBITS( ADC1_2_COMMON->CCR, 0x2, 14 );         //MDMA set to 0b10 = 12 and 10 bits
-    CLRBIT( ADC1_2_COMMON->CCR, 13 );               //DMA one shot mode
+    SETBIT( ADC1_2_COMMON->CCR, 13 );               //DMA circular mode
     SETBITS( ADC1_2_COMMON->CCR, 0x6, 0 );          // regular simultaneous mode only
 
 
