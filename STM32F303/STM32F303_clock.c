@@ -5,8 +5,7 @@
 
 //return int and function params int or uint32_t
 
-#define CLKSPEED_HSI 8000000UL  //8MHz RC oscillator clock
-#define CLKSPEED_HSE 8000000UL  //8MHz ext osc clock
+
 
 
 
@@ -120,11 +119,12 @@ uint32_t CLOCK_get_pllClk( void )   //return main clock value in Hz.
 
     uint32_t divider = 1U;
     uint32_t src_hz;
+
     //PLLSRC
     if( CHKBIT(RCC->CFGR, 16) ) //HSE PREDIV
     {
         //HSE PREDIV(1)
-        divider = (RCC->CFGR2 & 0xFU) + 1U;
+        divider *= (RCC->CFGR2 & 0xFU) + 1U;        // same as CFGR bit 17
         src_hz = CLKSPEED_HSE;
     }
     else

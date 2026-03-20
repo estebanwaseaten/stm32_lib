@@ -224,7 +224,7 @@ typedef struct
     volatile uint32_t CCER;         //0x20 not for basic timers
     volatile uint32_t CNT;
     volatile uint32_t PSC;
-    volatile uint32_t ARR;
+    volatile uint32_t ARR;          //0x2C
     volatile uint32_t res1;         //0x30 not for basic timers
     volatile uint32_t CCR1;         //not for basic timers
     volatile uint32_t CCR2;         //not for basic timers

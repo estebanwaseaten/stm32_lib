@@ -20,13 +20,14 @@ void TIMER_init( uint32_t tim, bool pllSrc )
     if( pllSrc )    //only writable under certain conditions (clock must be PLL and AHB/APB2 clocks max total division is 2)
     {
         SETBIT( RCC->CFGR3, clk_sel_bit );   // PLL vco output  -- tim2 --> 24 fine!
+        //  timer clock rate by multiplied 2!!!
     }
     else
     {
         CLRBIT( RCC->CFGR3, clk_sel_bit );   // PCLK2
     }
 
-    SETBIT( *clk_addr, clk_enable_bit );  //enable TIM clock
+    SETBIT( *clk_addr, clk_enable_bit );  //enable clock for TIM
     (void)RCC->APB2ENR;
     (void)RCC->APB1ENR;
 }
@@ -36,18 +37,21 @@ void TIMER2_setup( uint32_t us_between )    // timer is supposed to fire a TRGO 
     uint32_t clockRate = 0;
     if( CHKBIT( RCC->CFGR3, 24 ) ) //PLL
     {
-        clockRate = CLOCK_get_pllClk();
+        clockRate = 2 * CLOCK_get_pllClk(); //  timer clock rate by multiplied 2!!!
+        //clockRate = CLOCK_get_pllClk();
     }
     else
     {
         clockRate = CLOCK_get_PCLK2();
     }
 
-    setWord( 0x20009004, clockRate );
+    setWord( 0x20009004, clockRate );   //correct clock rate 72000000 or 144000000
 
     // timer can tick at clock rate or slower
     // if this number is too big, we could always set the pre-scaler...
     uint32_t countTo = clockRate/1000000 * us_between; //(in us)
+    setWord( 0x20009014, countTo );
+
 
     SETWRD( TIM2->CR1, 0x0 );   // re-init to default
     SETWRD( TIM2->CR2, 0 );     //
@@ -58,7 +62,7 @@ void TIMER2_setup( uint32_t us_between )    // timer is supposed to fire a TRGO 
 
     SETBIT( TIM2->EGR, 0 );         //Re-initialize the counter and generates an update of the registers.
     SETWRD( TIM2->SR, 0 );          //clear pending flags UIF
-    SETWRD( TIM2->ARR, countTo );     //
+    SETWRD( TIM2->ARR, countTo - 1U );   //
     SETBITS( TIM2->CR2, 0x2, 4 );   //update event creates TRGO --> needed to trigger ADC
     SETBIT( TIM2->CR1, 2 );         //only counter overflow/underflow generates an update
 
@@ -131,7 +135,7 @@ void testing( void )
 {
     //depends on timer what to enable here...
     //testing:
-
+    return;
     SETBIT( RCC->APB1ENR, 0 );  //enable TIM2 clock
     (void)RCC->APB1ENR;         //read back to delay until clock is active'
 

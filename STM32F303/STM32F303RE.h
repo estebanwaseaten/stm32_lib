@@ -8,5 +8,8 @@
 // STM32F303x6/x8 only has 12kB of SRAM  and 4kB CCM SRAM
 // STM32F303xB STM32F303xC 32/40kB SRAM and 8kB CCM SRAM
 
+#define CLKSPEED_HSI 8000000UL  //8MHz RC oscillator clock
+#define CLKSPEED_HSE 8000000UL  //8MHz ext osc clock
+
 
 #endif

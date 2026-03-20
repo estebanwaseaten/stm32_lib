@@ -215,7 +215,7 @@ void DAQ12_setup( void )
     //ADC_setup( 0x3 );             //enables DMA and only afterwards DMA can be enabled
 	ADC12_setup_dual();
 
-	TIMER2_setup( 1 );	     //1 us between each acquisition --> 8000 acquisitions in 8ms
+	TIMER2_setup( 100 );	     //1 us between each acquisition --> 8000 acquisitions in 8ms
 
     // AFTER configuring ADC we can enable DMA otherwise there is a problem
 	// do we need to enable more than one interrupt?
