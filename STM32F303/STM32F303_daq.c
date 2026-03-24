@@ -19,6 +19,8 @@ uint32_t gDataBufferLength;
 uint32_t gDataLength;			// --> circular buffer 200
 uint32_t gHalfDataLength;
 
+
+
 //settings to be set via cmds
 uint32_t g_settings_triggerMode;		// 0 --> software, 1, 2, 3 or 4 hardware
 uint32_t g_settings_triggerLevel;
@@ -29,6 +31,10 @@ uint32_t g_settings_datapoints;			// fixed at 1024 (max)
 uint32_t g_settings_adc_time;			// 000 = 1.5 cycles to 111 = 601,5 cycles per ADC - must be set in ADC SMPR1 register
 uint32_t g_settings_acquisition_speed;	// how many datapoints per second (defines timer settings)
 uint32_t g_settings_enabledChannels;
+
+uint32_t gSetArrCounter;
+uint32_t gARR;
+
 
 volatile uint32_t gDataReady;	//binary encoding 0b1111 for all four channels, 0b0001 for channel 1
 volatile uint32_t gCurrentFetchChannel;
@@ -187,6 +193,9 @@ void DAQ12_setup( void )
 	gDataLength = gDataBufferLength/2;
 	gHalfDataLength = gHalfDataLength/4;
 
+	gSetArrCounter = 0;
+	gARR = 143;	//1us period
+
 	setHandler_DMA( 1, 1, myDMA1_handler );
 	//setHandler_DMA( 2, ..., myDMA2_handler );
 	setHandler_ADC( 1, myADC_watchdog_handler );	//must still be enabled later
@@ -215,7 +224,7 @@ void DAQ12_setup( void )
     //ADC_setup( 0x3 );             //enables DMA and only afterwards DMA can be enabled
 	ADC12_setup_dual();
 
-	TIMER2_setup( 100 );	     //1 us between each acquisition --> 8000 acquisitions in 8ms
+	TIMER2_setup( gARR );	     //1 us between each acquisition --> 8000 acquisitions in 8ms
 
     // AFTER configuring ADC we can enable DMA otherwise there is a problem
 	// do we need to enable more than one interrupt?
@@ -233,7 +242,7 @@ void DAQ_change_mode( uint32_t newMode )
 }
 
 //changing timebase or buffer size --> always reset DMA and all variables so
-void DAQ_changeTimebase( uint32_t timebase )
+void DAQ_changeTimebase( uint32_t timebase )	//--> this really is done in timer directly
 {
 	//changer Timer2 settings (also maybe start from zero in the dma... --> dma needs to be reset too)
 	//always check ADC is stopped and done before disabling DMA!!!
@@ -253,6 +262,44 @@ void DAQ_changeBufferSize( uint32_t datapoints )
 	//enable DMA
 	//enable ADC
 	//restart timer
+}
+
+void DAQ_setARR( uint32_t arr )
+{
+	DAQ12_stop();
+
+	switch( gSetArrCounter )
+	{
+		case 0:
+			gARR = (arr << 24 ) & 0xFF000000;
+			setWord( 0x20009020, gARR );
+			gSetArrCounter++;
+			break;
+		case 1:
+			gARR |= (arr << 16) & 0x00FF0000;
+			setWord( 0x20009020, gARR );
+			gSetArrCounter++;
+			break;
+		case 2:
+			gARR |= (arr << 8 ) & 0x0000FF00;
+			setWord( 0x20009020, gARR );
+			gSetArrCounter++;
+			break;
+		case 3:
+			gARR |= (arr & 0x000000FF);
+			ADC12_maximize_sampling_time( gARR, TIMER2_getClockHz() );
+			TIMER2_setup( gARR );
+			setWord( 0x20009020, gARR );
+			DAQ12_start();
+			gSetArrCounter = 0;
+			gARR = 0;
+			break;
+		default:
+			gSetArrCounter = 0;
+			break;
+	}
+
+
 }
 
 //after trigger event when the measuremen is done. stop timer:

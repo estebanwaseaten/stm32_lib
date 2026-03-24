@@ -180,15 +180,10 @@ int SPI_enable_interrupt( uint32_t SPInum, int interruptType )
 
 int SPI_receive( void )
 {
-    //setWord( 0x20009000, SPI[1]->SR );
-
-    //if( kSPIbitsPerWord[1] == SPI_16BITSPERWORD )
     //clear interrupt by reading:
     if( CHKBIT( SPI1->SR , 0 ) )
     {
         uint16_t received = *(uint16_t *)&SPI1->DR;
-//        setWord( 0x20009004, (uint32_t)received );
-//        *(uint16_t *)&SPI1->DR = received + 1;
         return received;
     }
     return -1;
@@ -202,21 +197,28 @@ int SPI_isBusy( )
 int SPI_send( uint16_t data )
 {
     //only send if TX buffer empty
-    if( !(CHKBIT( SPI[1]->SR, 12 ) || CHKBIT( SPI[1]->SR, 11 )) ) // only if fifo empty!
-    //if( CHKBIT( SPI1->SR , 1 ) )    //tx buffer empty
+    if( !(CHKBIT( SPI[1]->SR, 12 ) && CHKBIT( SPI[1]->SR, 11 )) ) // only if fifo not full
     {
-        //setWord( 0x20009010, SPI[1]->SR );
-        //setWord( 0x20009014, data );
         *(uint16_t *)&SPI1->DR = data;      //sets half word...
         return 0;
     }
+    SPI_reset();
     return -1;
 }
 
 void SPI_reset( void )
 {
     CLRBIT( SPI[1]->CR1, 6 );        // SPI disable
+
+    while( CHKBIT( SPI[1]->SR, 0 ) )                     // drain RX FIFO
+    {
+       (void)(*(volatile uint16_t *)&SPI1->DR);
+    }
+    while( CHKBIT( SPI[1]->SR, 7 ) )        //wait for not busy
+    {}
+
     SETBIT( SPI[1]->CR1, 6 );        // SPI enable
+    setWord( 0x20009020, getWord( 0x20009020 ) + 1 );
 }
 
 

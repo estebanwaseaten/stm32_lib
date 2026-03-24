@@ -1,7 +1,7 @@
 #include "../STM32.h"
 #include "STM32F303.h"
 
-
+uint8_t pllClkDiv[12] = {0,1,3,5,7,9,11,15,31,63,127,255};
 
 //init for easier access
 volatile ADC_map * const ADC[5] = {
@@ -34,15 +34,15 @@ void ADC_init( uint32_t ADCnum )
     //start ADC clocks
     if( (ADCnum == 1) || (ADCnum == 2) )
     {
-        SETBIT( RCC->AHBENR, 28 );  //enable ADC12 interface clock
+        SETBIT( RCC->AHBENR, 28 );     //enable ADC12 interface clock
         (void)RCC->AHBENR;             // read-back to flush/ensure clock gate opened
-        CLRWRD( ADC_common[1]->CCR );      //reset comon control register for ADC 1 and 2
+        CLRWRD( ADC_common[1]->CCR );  //reset comon control register for ADC 1 and 2   --> selects PLL as clock source
     }
     else if( (ADCnum == 3) || (ADCnum == 4) )
     {
-        SETBIT( RCC->AHBENR, 29 );  //enable ADC34 interface clock
-        (void)RCC->AHBENR;             // read-back to flush/ensure clock gate opened
-        CLRWRD( ADC_common[3]->CCR );      //reset comon control register for ADC 1 and 2
+        SETBIT( RCC->AHBENR, 29 );      //enable ADC34 interface clock
+        (void)RCC->AHBENR;              // read-back to flush/ensure clock gate opened
+        CLRWRD( ADC_common[3]->CCR );   //reset comon control register for ADC 1 and 2   --> selects PLL as clock source
     }
 
     //start voltage regulator:
@@ -73,6 +73,8 @@ void ADC_setup( uint32_t ADCnum )
 {
 
 }
+
+
 
 // ADC1 --> PA0 (ADC1_IN1)      (1-5 = fast channels)       // EXTSEL  = 1011 TIM2 reg          -- exists on nucleo board
 // ADC2 --> PA4 (ADC2_IN1)      (1-5 = fast channels)       // EXTEN/EXTSEL only in master      -- exists on nucleo board
@@ -139,16 +141,113 @@ void ADC12_setup_dual( void )   //pin select?
     SETBITS( ADC[1]->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence (do I need this?)
     SETBITS( ADC[2]->SQR1, 0x1 , 6 );         //select channel 1 for 1st conversion in regular sequence (do I need this?)
 
+    //1. set timer for period (timer runs at 144MHz)
+    //2. make ADC params fit into that period (ADC runs at 72MHz maximum)
+
+    //what is the ADC measurement period? minimum: 1us
+    // conversion cycles for 12 bits: 12.5 clocks
+    // sampling cycles SMPx:
+    // 0x0 --> 1.5 clocks
+    // 0x1 --> 2.5
+    // 0x2 --> 4.5
+    // 0x3 --> 7.5
+    // 0x4 --> 19.5
+    // 0x5 --> 61.5
+    // 0x6 --> 181.5
+    // 0x7 --> 601.5
+
+    //fastest: 14 cycles at ADC at 144 MHz
+
+    //   1 us --> 0x4 (19.6 clk cycles)     -- fast opamp buffer anyways???
+    // > 1 us --> 0x5 (61.5 clk cycles)
+
     CLRWRD( ADC[1]->SMPR1 );              //fastest sample time
-    SETBITS( ADC[1]->SMPR1, 0x5, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
+    SETBITS( ADC[1]->SMPR1, 0x4, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
 
     CLRWRD( ADC[2]->SMPR1 );              //fastest sample time
-    SETBITS( ADC[2]->SMPR1, 0x5, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
+    SETBITS( ADC[2]->SMPR1, 0x4, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
 }
 
+uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t timClk ) //needs timer value and timerSpeed
+{
+    uint32_t adcClk = ADC12_getClockHz();
+    uint32_t cycles = (timClk * (timArr + 1u)) / (adcClk * 10u);
 
+    CLRWRD( ADC[1]->SMPR1 );              //fastest sample time
+    CLRWRD( ADC[2]->SMPR1 );              //fastest sample time
+    uint8_t value = 0;
+    if( cycles > 614 )
+    {
+        value = 0x7;
+    }
+    else if( cycles > 194 )
+    {
+        value = 0x6;
+    }
+    else if( cycles > 74 )
+    {
+        value = 0x5;
+    }
+    else if( cycles > 32 )
+    {
+        value = 0x4;
+    }
+    else if( cycles > 20 )
+    {
+        value = 0x3;
+    }
+    else if( cycles > 17 )
+    {
+        value = 0x2;
+    }
+    else if( cycles > 15 )
+    {
+        value = 0x1;
+    }
+    else if( cycles > 14 )
+    {
+        value = 0x0;
+    }
+    SETBITS( ADC[1]->SMPR1, value, 3 );
+    SETBITS( ADC[2]->SMPR1, value, 3 );
+    //ONE ADC conversion is 12.5 ADC cycles + 1.5/2.5/4.5/7.5/19.5/61.5/181.5/601.5
+    //                   or 13 + 14/15/17/20/32/74/194/614
+    return value;
+}
 
-
+uint32_t ADC12_getClockHz( void )
+{
+    if( CHKBIT( ADC1_2_COMMON->CCR, 17 ) )
+    {
+        if( CHKBIT( ADC1_2_COMMON->CCR, 16 ) )  //11
+        {
+            return CLOCK_get_AHB()/4;
+        }
+        else    //10
+        {
+            return CLOCK_get_AHB()/2;
+        }
+    }
+    else
+    {
+        if( CHKBIT( ADC1_2_COMMON->CCR, 16 ) )  //01
+        {
+            return CLOCK_get_AHB();
+        }
+        else    //00
+        {
+            uint32_t prescaler12 = (RCC->CFGR2 >> 4) & 0xF;
+            if( prescaler12 > 11 )
+            {
+                return CLOCK_get_pllClk() / 256;
+            }
+            else
+            {
+                return CLOCK_get_pllClk() / (pllClkDiv[prescaler12] + 1);
+            }
+        }
+    }
+}
 
 
 

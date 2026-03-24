@@ -32,26 +32,22 @@ void TIMER_init( uint32_t tim, bool pllSrc )
     (void)RCC->APB1ENR;
 }
 
-void TIMER2_setup( uint32_t us_between )    // timer is supposed to fire a TRGO (master mode) every us_between...
+uint32_t TIMER2_getClockHz( void )
 {
-    uint32_t clockRate = 0;
     if( CHKBIT( RCC->CFGR3, 24 ) ) //PLL
     {
-        clockRate = 2 * CLOCK_get_pllClk(); //  timer clock rate by multiplied 2!!!
-        //clockRate = CLOCK_get_pllClk();
+        return 2 * CLOCK_get_pllClk(); //  timer clock rate by multiplied 2!!!
     }
     else
     {
-        clockRate = CLOCK_get_PCLK2();
+        return CLOCK_get_PCLK2();
     }
+}
 
-    setWord( 0x20009004, clockRate );   //correct clock rate 72000000 or 144000000
-
+void TIMER2_setup( uint32_t arr )    // timer is supposed to fire a TRGO (master mode) every us_between...
+{
     // timer can tick at clock rate or slower
     // if this number is too big, we could always set the pre-scaler...
-    uint32_t countTo = clockRate/1000000 * us_between; //(in us)
-    setWord( 0x20009014, countTo );
-
 
     SETWRD( TIM2->CR1, 0x0 );   // re-init to default
     SETWRD( TIM2->CR2, 0 );     //
@@ -60,13 +56,11 @@ void TIMER2_setup( uint32_t us_between )    // timer is supposed to fire a TRGO 
 
     SETWRD( TIM2->PSC, 0 );     // timer pre-scaler (divides clock frequency -> set to 0 -> no divide, timer ticks at clock frequency)
 
-    SETBIT( TIM2->EGR, 0 );         //Re-initialize the counter and generates an update of the registers.
+    SETBIT( TIM2->EGR, 0 );         //Re-initialize the counter and generates an update of the registers. // should maybe be after ARR
     SETWRD( TIM2->SR, 0 );          //clear pending flags UIF
-    SETWRD( TIM2->ARR, countTo - 1U );   //
+    SETWRD( TIM2->ARR, arr );   //
     SETBITS( TIM2->CR2, 0x2, 4 );   //update event creates TRGO --> needed to trigger ADC
     SETBIT( TIM2->CR1, 2 );         //only counter overflow/underflow generates an update
-
-    setWord( 0x20009000, countTo );
 }
 
 void TIMER2_start()
@@ -98,10 +92,22 @@ inline void TIMER2_clear_interrupt( void )      //
     SETWRD( TIM2->SR, 0 );
 }
 
-inline uint32_t TIMER2_getcount( void )
+inline uint32_t TIMER2_getCount( void )
 {
-    setWord( 0x20009010, TIM2->SR );
+    //setWord( 0x20009010, TIM2->SR );
     return TIM2->CNT;
+}
+
+inline uint32_t TIMER2_getCountTo( void )
+{
+    return TIM2->ARR;
+}
+
+
+
+uint32_t TIMER2_getScale( void )    //not needed really
+{
+    return TIM2->PSC;
 }
 
 void TIMER2_restart( uint32_t tim )

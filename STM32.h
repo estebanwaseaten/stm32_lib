@@ -95,7 +95,13 @@ uint32_t SYSTICK_get_ticks_raw();
 
 //TIMERS
 //per timer:
-uint32_t TIMER2_getcount( void );
+uint32_t TIMER2_getClockHz( void );
+uint32_t TIMER2_getCount( void );
+uint32_t TIMER2_getCountTo( void );
+//uint32_t TIMER2_getScale( void );
+void TIMER2_setARRHI( uint32_t arrHi );
+void TIMER2_setARRLO( uint32_t arrLo );
+
 void TIMER2_clear_interrupt( void );
 void TIMER2_setup( uint32_t us_between );
 
@@ -105,6 +111,7 @@ void TIMER_enable( uint32_t tim, uint32_t divider, bool pllSrc );
 void TIMER2_start();
 void TIMER2_stop();
 void TIMER2_disable();
+
 
 
 //GPIO
@@ -118,6 +125,8 @@ int GPIO_get( uint32_t pin );
 void ADC_init( uint32_t ADCnum );
 void ADC_setup( uint32_t ADCnum );
 void ADC12_setup_dual( void );
+uint32_t ADC12_getClockHz( void );
+uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t timClk );
 void ADC_enable( uint32_t ADCnum, bool manual );
 void ADC_arm( uint32_t ADCnum );
 void ADC_disarm( uint32_t ADCnum );
@@ -159,6 +168,7 @@ void DAQ12_stop( void );
 void DAQ_currentFetchDone( void );
 void DAQ_prepFetch( uint32_t channel );
 
+void DAQ_setARR( uint32_t arr );
 
 
 // for setting custom handlers (implement as needed)
