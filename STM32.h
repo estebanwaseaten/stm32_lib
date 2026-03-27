@@ -158,17 +158,26 @@ void DMA_enable( uint32_t dma_num, uint32_t dma_channel );
 
 void DMA_clear_interrupts( uint32_t DMAnum );
 
-//DAQ subroutines
+/********* DAQ subroutines *********/
 void DAQ12_setup( void );
+
+//DAQ flow control
 void DAQ12_pause( void );
 void DAQ12_resume( void );
 void DAQ12_start( void );
 void DAQ12_stop( void );
 
-void DAQ_currentFetchDone( void );
+// fetching data
 void DAQ_prepFetch( uint32_t channel );
+void DAQ_currentFetchDone( void );
 
-void DAQ_setARR( uint32_t arr );
+//settings:
+uint32_t DAQ_config_DataBuffer( uint32_t dataPoints, bool dmaReset );
+void DAQ_config_ARR( uint8_t arrByte );
+void DAQ_config_trigger_mode( uint16_t newMode );
+void DAQ_config_trigger_level( uint16_t newLevel );
+void DAQ_config_trigger_pos( uint16_t newPos );
+
 
 
 // for setting custom handlers (implement as needed)

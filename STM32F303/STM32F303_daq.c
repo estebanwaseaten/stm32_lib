@@ -20,7 +20,7 @@ uint32_t gDataLength;			// --> circular buffer 200
 uint32_t gHalfDataLength;
 
 
-
+// could create a settings struct?
 //settings to be set via cmds
 uint32_t g_settings_triggerMode;		// 0 --> software, 1, 2, 3 or 4 hardware
 uint32_t g_settings_triggerLevel;
@@ -45,6 +45,7 @@ volatile uint32_t gDataIndex; 			//points to current mem location during fast da
 volatile uint32_t gDataCounter;			//start with 0 and count up to gDataTransferSize
 volatile uint32_t gDatapointsAcquired;
 
+/********* DAQ interrupt handlers *********/
 // called at 1/2 and full circular buffer --> opportunity to check if we have enough datapoints after trigger
 void myDMA1_handler( void )
 {
@@ -96,8 +97,11 @@ void myADC_watchdog_handler( void )
 	//uint32_t remaining = DMA1->CH[0].CNDTR;
 	//awd_position = BUFFER_SIZE - remaining;  // ← Position im Buffer
     //awd_triggered = true;
+	setWord( 0x20009024, getWord( 0x20009024 ) + 1 );
 }
 
+
+/********* DAQ data fetch *********/
 void DAQ_currentFetchDone( void )
 {
 	//invalidate data for this channel	//gCurrentFetchChannel
@@ -137,7 +141,6 @@ void DAQ_prepFetch( uint32_t channel )		//if
 		gDataBitShift = 16;
 	}
 
-
 	gDataTransferSize = g_settings_datapoints;
 	setWord( MEMBASE12, gDataTransferSize + (gDataTransferSize << 16) );		//set length of remaing transfer into first bit.
 }
@@ -147,6 +150,9 @@ uint32_t isDataAvailable( void )
 	return gDataReady;
 }
 
+
+
+/********* DAQ triggering *********/
 inline void setLastTriggerEvent( uint32_t dmaPos )
 {
 	gLastTriggerEvent = dmaPos;
@@ -157,25 +163,8 @@ inline uint32_t getLastTriggerEvent( void )
 }
 
 
-void DAQ_configDataBuffer( uint32_t newHalfData )		//
-{
-	// must be a power of 4
-	uint32_t newBufferSize = 4*newHalfData;
 
-	if( newBufferSize > MAXDATAPTS )
-	{
-		gDataBufferLength = MAXDATAPTS;
-	}
-	else
-	{
-		gDataBufferLength = newBufferSize;
-	}
 
-	gDataLength = gDataBufferLength/2;
-
-	//reset DMA here and configure accordingly
-
-}
 //correct order
 // 1. DMA config (NOT ENABLE!)
 // 2. ADC config mit DMAEN
@@ -188,20 +177,24 @@ void DAQ12_setup( void )
 	//gHardwareTrigger = false;
 	gTriggerHappened = false;
 	gLastTriggerEvent = 0;				// record DMA pos of last trigger event. Check if there is enough datapoints after 1/2- and 1-DMA interrupt
-	gDataBufferLength = 4*g_settings_datapoints;			// keep it short for testing
 	gCurrentFetchChannel = 0;
-	gDataLength = gDataBufferLength/2;
-	gHalfDataLength = gHalfDataLength/4;
+
+	DAQ_config_DataBuffer( g_settings_datapoints, false );	//no dma reset here
+
 
 	gSetArrCounter = 0;
 	gARR = 143;	//1us period
 
+	/* enable interrup handlers for
+ 	 *		- DMA transfers (to check if we acquired enough datapoints after trigger event or in general)
+	 *		- ADC watchdog (to)
+	 */
 	setHandler_DMA( 1, 1, myDMA1_handler );
 	//setHandler_DMA( 2, ..., myDMA2_handler );
-	setHandler_ADC( 1, myADC_watchdog_handler );	//must still be enabled later
-	setHandler_ADC( 2, myADC_watchdog_handler );	//must still be enabled later
-	setHandler_ADC( 3, myADC_watchdog_handler );	//must still be enabled later
-	setHandler_ADC( 4, myADC_watchdog_handler );	//must still be enabled later
+	setHandler_ADC( 1, myADC_watchdog_handler );	// handler for ADC1
+	setHandler_ADC( 2, myADC_watchdog_handler );	// handler for ADC2
+	setHandler_ADC( 3, myADC_watchdog_handler );	// handler for ADC3
+	setHandler_ADC( 4, myADC_watchdog_handler );	// handler for ADC4
 
     // init prepares everything in an arbitrary way
     // config sets specific
@@ -232,75 +225,12 @@ void DAQ12_setup( void )
 	DMA_enable( 1, 1 );
 	//	DMA_enable( 2, 1 );	not needed in dual mode
 
-
 	DAQ12_start();
 }
 
-void DAQ_change_mode( uint32_t newMode )
-{
 
-}
-
-//changing timebase or buffer size --> always reset DMA and all variables so
-void DAQ_changeTimebase( uint32_t timebase )	//--> this really is done in timer directly
-{
-	//changer Timer2 settings (also maybe start from zero in the dma... --> dma needs to be reset too)
-	//always check ADC is stopped and done before disabling DMA!!!
-
-	//maybe also need to change ADC settings if the DAQ would be too slow?
-	// optimize: DAQ as long as possible for given timebase
-
-}
-
-void DAQ_changeBufferSize( uint32_t datapoints )
-{
-	//change DMA settings --> gDataLength
-	//stop timer
-	//stop ADC //always check ADC is stopped and done before disabling DMA!!!
-	//disable DMA
-		//change DMA settings
-	//enable DMA
-	//enable ADC
-	//restart timer
-}
-
-void DAQ_setARR( uint32_t arr )
-{
-	DAQ12_stop();
-
-	switch( gSetArrCounter )
-	{
-		case 0:
-			gARR = (arr << 24 ) & 0xFF000000;
-			setWord( 0x20009020, gARR );
-			gSetArrCounter++;
-			break;
-		case 1:
-			gARR |= (arr << 16) & 0x00FF0000;
-			setWord( 0x20009020, gARR );
-			gSetArrCounter++;
-			break;
-		case 2:
-			gARR |= (arr << 8 ) & 0x0000FF00;
-			setWord( 0x20009020, gARR );
-			gSetArrCounter++;
-			break;
-		case 3:
-			gARR |= (arr & 0x000000FF);
-			ADC12_maximize_sampling_time( gARR, TIMER2_getClockHz() );
-			TIMER2_setup( gARR );
-			setWord( 0x20009020, gARR );
-			DAQ12_start();
-			gSetArrCounter = 0;
-			gARR = 0;
-			break;
-		default:
-			gSetArrCounter = 0;
-			break;
-	}
-
-
-}
+/* Functions that start/stop/pause the DAQ
+ */
 
 //after trigger event when the measuremen is done. stop timer:
 void DAQ12_pause( void )
@@ -350,4 +280,88 @@ void DAQ12_stop( void )
 
     //TCIF löschen
     //SETWRD( DMA1->IFCR, 0xFFFFFFFF );
+}
+
+
+
+/* Functions that change DAQ settings
+ */
+
+void DAQ_config_trigger_mode( uint16_t newMode )
+{
+	g_settings_triggerMode = newMode;
+}
+
+void DAQ_config_trigger_level( uint16_t newLevel )
+{
+	g_settings_triggerLevel = newLevel;
+}
+
+void DAQ_config_trigger_pos( uint16_t newPos )
+{
+	g_settings_triggerPos = newPos;
+}
+
+void DAQ_config_ARR( uint8_t arrByte )		//set counter byte by byte
+{
+	uint32_t arr = arrByte;
+	DAQ12_stop();
+	switch( gSetArrCounter )
+	{
+		case 0:
+			gARR = (arr << 24 ) & 0xFF000000;
+			setWord( 0x20009020, gARR );
+			gSetArrCounter++;
+			break;
+		case 1:
+			gARR |= (arr << 16) & 0x00FF0000;
+			setWord( 0x20009020, gARR );
+			gSetArrCounter++;
+			break;
+		case 2:
+			gARR |= (arr << 8 ) & 0x0000FF00;
+			setWord( 0x20009020, gARR );
+			gSetArrCounter++;
+			break;
+		case 3:
+			gARR |= (arr & 0x000000FF);
+			ADC12_maximize_sampling_time( gARR, TIMER2_getClockHz() );
+			TIMER2_setup( gARR );
+			setWord( 0x20009020, gARR );
+			DAQ12_start();
+			gSetArrCounter = 0;
+			gARR = 0;
+			break;
+		default:
+			gSetArrCounter = 0;
+			break;
+	}
+}
+
+uint32_t DAQ_config_DataBuffer( uint32_t dataPoints, bool dmaReset )		//half the data size --> guarantees multiple of 4
+{
+	if( CHKBIT( dataPoints, 0 ) )	//odd --> add one --> even
+		dataPoints++;
+
+	if( dataPoints > MAXVALIDDATAPTS )
+		dataPoints = MAXVALIDDATAPTS;
+
+	uint32_t newBufferSize = 2*dataPoints;	// --> always a multiple of 4!
+
+	if( newBufferSize > MAXDATAPTS )
+		newBufferSize = MAXDATAPTS;
+
+	gDataBufferLength = newBufferSize;
+	gDataLength = newBufferSize/2;
+	gHalfDataLength = newBufferSize/4;
+
+	if( dmaReset )
+	{
+		//reset DMA here and configure accordingly
+		DAQ12_stop();
+		DMA_setup_peri( 1, 1, &ADC1_2_COMMON->CDR, (uint32_t*)(MEMBASE12+0x4), 32, true, gDataBufferLength );
+		//DMA_setup_peri( 2, 5, &ADC3_4_COMMON->CDR, (uint32_t*)(MEMBASE34+0x4), 32, true, gDataBufferLength );	//DMA2 channel 5
+		DAQ12_start();
+	}
+	return gDataLength;
 }

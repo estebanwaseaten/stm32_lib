@@ -171,7 +171,10 @@ void ADC12_setup_dual( void )   //pin select?
 uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t timClk ) //needs timer value and timerSpeed
 {
     uint32_t adcClk = ADC12_getClockHz();
-    uint32_t cycles = (timClk * (timArr + 1u)) / (adcClk * 10u);
+    uint32_t ratio = timClk/adcClk; // always2 ??   we count timArr and need to figure out how many adcClk cycles fit into that...
+    uint32_t cycles = ratio*(timClk * (timArr + 1u)) / (adcClk * 10u);
+
+    setWord( 0x20009030, cycles );
 
     CLRWRD( ADC[1]->SMPR1 );              //fastest sample time
     CLRWRD( ADC[2]->SMPR1 );              //fastest sample time
