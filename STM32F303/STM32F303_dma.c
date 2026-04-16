@@ -128,3 +128,11 @@ void DMA_clear_interrupts( uint32_t DMAnum )
     else if( DMAnum == 2)
         SETWRD( DMA2->IFCR, 0xFFFFFFFF );
 }
+
+uint16_t DMA_get_pos( uint32_t  DMAnum, uint32_t dma_channel )
+{
+    if( DMAnum == 1 )
+        return gDMAbufferLength - DMA1->CH[dma_channel - 1].CNDTR;
+
+    return gDMAbufferLength - DMA2->CH[dma_channel - 1].CNDTR;
+}

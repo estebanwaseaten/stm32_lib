@@ -134,6 +134,12 @@ void ADC_disarm( uint32_t ADCnum );
 int ADC_disable( uint32_t ADCnum );
 uint16_t ADC_read_single( uint32_t ADCnum );
 
+void ADC_enable_watchdog( uint32_t ADCnum, uint16_t level );
+void ADC_disable_watchdogs();
+
+void ADC1_watchdog_clear_and_disarm( void );
+void ADC1_watchdog_arm( void );
+
 //SPI
 int SPI_init( uint32_t SPInum );
 void SPI_reset( void );
@@ -158,6 +164,9 @@ void DMA_enable( uint32_t dma_num, uint32_t dma_channel );
 
 void DMA_clear_interrupts( uint32_t DMAnum );
 
+uint16_t DMA_get_pos( uint32_t  DMAnum, uint32_t dma_channel );
+
+
 /********* DAQ subroutines *********/
 void DAQ12_setup( void );
 
@@ -166,6 +175,8 @@ void DAQ12_pause( void );
 void DAQ12_resume( void );
 void DAQ12_start( void );
 void DAQ12_stop( void );
+
+
 
 // fetching data
 void DAQ_prepFetch( uint32_t channel );
@@ -177,7 +188,12 @@ void DAQ_config_ARR( uint8_t arrByte );
 void DAQ_config_trigger_mode( uint16_t newMode );
 void DAQ_config_trigger_level( uint16_t newLevel );
 void DAQ_config_trigger_pos( uint16_t newPos );
+void DAQ_config_trigger_risingEdge( bool rising );
 
+uint16_t DAQ_config_trigger_mode_get( void );
+uint16_t DAQ_config_trigger_level_get( void );
+uint16_t DAQ_config_trigger_pos_get( void );
+bool DAQ_config_trigger_risingEdge_get( void );
 
 
 // for setting custom handlers (implement as needed)

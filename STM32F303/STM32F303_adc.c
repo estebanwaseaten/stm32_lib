@@ -252,6 +252,65 @@ uint32_t ADC12_getClockHz( void )
     }
 }
 
+void ADC_enable_interrupt( uint32_t ADC_num )
+{
+    NVIC_ISER->BANK[0] |= (1u << 18);
+}
+
+inline void ADC1_watchdog_clear_and_disarm( void )
+{
+    SETBIT( ADC1->ISR, 7 );            // clear the watchdog flag
+    CLRBIT( ADC1->IER, 7 );            // disable AWD1IE - no more watchdog interrupts
+}
+
+inline void ADC1_watchdog_arm( void )
+{
+    SETBIT( ADC1->IER, 7 );
+}
+
+void ADC_enable_watchdog( uint32_t ADCnum, uint16_t level )
+{
+    //turn off adc:
+    ADC_enable_interrupt(1);
+    //turn off ADC voltage regulator:
+    switch ( ADCnum )
+    {
+        case 1:
+            // Single(1) regular channel: AWD1SGL bit = 1, AWD1EN bit = 1, AWD1EN bit = 0
+
+            SETBIT( ADC1->IER, 7 );      //enable interrupt
+
+            SETBIT( ADC1->CFGR, 26 );    // select channel 1
+            SETBIT( ADC1->CFGR, 23 );    // enable on regular channels
+            SETBIT( ADC1->CFGR, 22 );    // enable a singular channel
+
+            //                 0x0hhh0lll
+            SETWRD( ADC1->TR1, 0x00FF0000 );       //threshold
+
+            //(watchdogs 2&3 can be configured more flexibly)
+            break;
+        case 2:
+            SETBIT( ADC2->IER, 7 );
+            break;
+        case 3:
+            SETBIT( ADC3->IER, 7 );
+            break;
+        case 4:
+            SETBIT( ADC4->IER, 7 );
+            break;
+        default:
+            return;
+    }
+}
+
+void ADC_disable_watchdogs()
+{
+    CLRBIT( ADC1->IER, 7 );
+    CLRBIT( ADC2->IER, 7 );
+    CLRBIT( ADC3->IER, 7 );
+    CLRBIT( ADC4->IER, 7 );
+}
+
 
 
 //not really needed anymore --> reading done via DMA
