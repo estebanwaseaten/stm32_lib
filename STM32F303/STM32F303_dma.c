@@ -13,7 +13,7 @@ uint32_t    gDMAbufferLength;
 bool        gCircular;
 
 //init clocks and reset interrupts
-void DMA_init( bool dma1, bool dma2 )
+void DMA_start_clock( bool dma1, bool dma2 )
 {
     if( dma1 )
     {

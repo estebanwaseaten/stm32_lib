@@ -27,10 +27,8 @@ volatile ADC_common_map * const ADC_common[5] = {
  */
 
 
-void ADC_init( uint32_t ADCnum )
+void ADC_start_clock( uint32_t ADCnum )
 {
-    GPIO_init();    //just to make sure
-
     //start ADC clocks
     if( (ADCnum == 1) || (ADCnum == 2) )
     {
@@ -44,7 +42,10 @@ void ADC_init( uint32_t ADCnum )
         (void)RCC->AHBENR;              // read-back to flush/ensure clock gate opened
         CLRWRD( ADC_common[3]->CCR );   //reset comon control register for ADC 1 and 2   --> selects PLL as clock source
     }
+}
 
+void ADC_init( uint32_t ADCnum )
+{
     //start voltage regulator:
     if( !CHKBIT( ADC[ADCnum]->CR, 28 ) )
     {

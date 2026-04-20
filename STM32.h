@@ -25,12 +25,23 @@ enum sys_clocks
     SYSCLK_PLL
 };
 
-
-enum gpio_pin_functions
+enum gpio_banks
 {
-    PIN_OUTPUT,
-    PIN_INPUT
+    GPIO_BANK_A,
+    GPIO_BANK_B,
+    GPIO_BANK_C,
+    GPIO_BANK_D,
+    GPIO_BANK_E,
+    GPIO_BANK_F,
+    GPIO_BANK_G,
+    GPIO_BANK_H
 };
+
+// 0b00 input, 0b01 general purpose output, 0b10 alternate function, 0b11 analog mode
+#define GPIO_PIN_INPUT  0x0
+#define GPIO_PIN_OUTPUT 0x1
+#define GPIO_PIN_ALT    0x2
+#define GPIO_PIN_ANALOG 0x3
 
 //data acquisition (DAQ):
 #define CH1 0x1
@@ -94,35 +105,52 @@ uint32_t SYSTICK_get_us();
 uint32_t SYSTICK_get_ticks_raw();
 
 //TIMERS
-//per timer:
+void TIMER_start_clock( uint32_t tim, bool pllSrc );
+
+//really only the inlines should be separate functions for TIM#
+void TIMER2_setup( uint32_t arr, uint32_t prescaler  );
+void TIMER2_interrupt( bool enable );
+void TIMER2_interrupt_enable( void );
+void TIMER2_interrupt_clear( void );
 uint32_t TIMER2_getClockHz( void );
-uint32_t TIMER2_getCount( void );
-uint32_t TIMER2_getCountTo( void );
-//uint32_t TIMER2_getScale( void );
-void TIMER2_setARRHI( uint32_t arrHi );
-void TIMER2_setARRLO( uint32_t arrLo );
+void TIMER2_start( void );
+void TIMER2_stop( void );
+void TIMER2_resume( void );
+void TIMER2_restart( void );
+void TIMER2_disable( void );
 
-void TIMER2_clear_interrupt( void );
-void TIMER2_setup( uint32_t us_between );
+void TIMER3_setup( uint32_t arr, uint32_t prescaler );
+void TIMER3_enable( void );
+void TIMER3_disable( void );
+void TIMER3_start( void );
+void TIMER3_stop( void );
+void TIMER3_interrupt_enable( void );
+void TIMER3_interrupt_clear( void );
+uint32_t TIMER3_getCountTo( void );
+uint32_t TIMER3_getPrescaler( void );
 
-//general
-void TIMER_init( uint32_t tim, bool pllSrc );
-void TIMER_enable( uint32_t tim, uint32_t divider, bool pllSrc );
-void TIMER2_start();
-void TIMER2_stop();
-void TIMER2_disable();
+// DAC
+void DAC_start_clock( uint32_t DACnum );
+void DAC_enable( uint32_t channel );
+void DAC_set( uint16_t level );
+void DAC_disable( void );
 
+//COMP
+void COMP_start_clock( void );
 
 
 //GPIO
-void GPIO_init( void );
-void GPIO_changeFunction( uint32_t pin, uint32_t function );
+void GPIO_start_clock( void );
+void GPIO_changeFunction( uint32_t bank, uint32_t pin, uint32_t function );
+
 void GPIO_set( uint32_t pin );
 void GPIO_unset( uint32_t pin );
-int GPIO_get( uint32_t pin );
+uint32_t GPIO_get( uint32_t pin );
 
 //ADC
+void ADC_start_clock( uint32_t ADCnum );
 void ADC_init( uint32_t ADCnum );
+
 void ADC_setup( uint32_t ADCnum );
 void ADC12_setup_dual( void );
 uint32_t ADC12_getClockHz( void );
@@ -141,7 +169,7 @@ void ADC1_watchdog_clear_and_disarm( void );
 void ADC1_watchdog_arm( void );
 
 //SPI
-int SPI_init( uint32_t SPInum );
+int SPI_start_clock( uint32_t SPInum );
 void SPI_reset( void );
 int SPI_enable( uint32_t SPInum, uint8_t bitsPerWord );
 int SPI_disable( uint32_t SPInum );
@@ -153,8 +181,10 @@ void SPI_test( void );
 int SPI_receive( void );
 int SPI_send( uint16_t data );
 
+
 //DMA
-void DMA_init( bool dma1, bool dma2 );
+void DMA_start_clock( bool dma1, bool dma2 );
+
 void DMA_setup_peri( uint32_t dma, uint32_t chan, volatile uint32_t *sourceAddr, uint32_t *destAddr, uint32_t bitSize, bool circ, uint32_t bufferLength );
 void DMA_reset( uint32_t DMAnum, uint32_t dma_channel );
 
@@ -168,7 +198,24 @@ uint16_t DMA_get_pos( uint32_t  DMAnum, uint32_t dma_channel );
 
 
 /********* DAQ subroutines *********/
-void DAQ12_setup( void );
+void DAQ12_init( void );
+
+//config
+void DAQ_config_timebase( uint8_t timebase );
+uint32_t DAQ_config_dataBuffer( uint32_t dataPoints, bool dmaReset );
+
+void DAQ_config_trigger_mode( uint16_t newMode );
+void DAQ_config_trigger_level( uint16_t newLevel );
+void DAQ_config_trigger_pos( uint16_t newPos );
+void DAQ_config_trigger_risingEdge( bool rising );
+
+uint8_t DAQ_config_timebase_get( void );
+uint16_t DAQ_config_trigger_mode_get( void );
+uint16_t DAQ_config_trigger_level_get( void );
+uint16_t DAQ_config_trigger_pos_get( void );
+bool DAQ_config_trigger_risingEdge_get( void );
+
+void Interrupt_Enable( uint32_t irq );
 
 //DAQ flow control
 void DAQ12_pause( void );
@@ -176,25 +223,9 @@ void DAQ12_resume( void );
 void DAQ12_start( void );
 void DAQ12_stop( void );
 
-
-
 // fetching data
 void DAQ_prepFetch( uint32_t channel );
 void DAQ_currentFetchDone( void );
-
-//settings:
-uint32_t DAQ_config_DataBuffer( uint32_t dataPoints, bool dmaReset );
-void DAQ_config_ARR( uint8_t arrByte );
-void DAQ_config_trigger_mode( uint16_t newMode );
-void DAQ_config_trigger_level( uint16_t newLevel );
-void DAQ_config_trigger_pos( uint16_t newPos );
-void DAQ_config_trigger_risingEdge( bool rising );
-
-uint16_t DAQ_config_trigger_mode_get( void );
-uint16_t DAQ_config_trigger_level_get( void );
-uint16_t DAQ_config_trigger_pos_get( void );
-bool DAQ_config_trigger_risingEdge_get( void );
-
 
 // for setting custom handlers (implement as needed)
 typedef void (*isr_t)(void);

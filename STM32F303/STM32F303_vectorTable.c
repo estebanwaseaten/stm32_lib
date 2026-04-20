@@ -21,6 +21,18 @@ volatile uint32_t isr_vectors[NUM_VECTORS] =
 };
 
 
+
+
+void Interrupt_Enable( uint32_t irq )
+{
+    //enable interrupt
+    uint32_t bank = (irq >> 5);
+    SETBIT( NVIC_ICPR->BANK[bank], irq - bank*32); //clear pending
+    SETBIT( NVIC_ISER->BANK[bank], irq - bank*32); //enable interrupt
+}
+
+
+
 //we need to initiialize stuff here!
 void Reset_Handler( void )
 {

@@ -43,6 +43,9 @@
 
 #define APB2_BASE 0x40010000
     #define SYSCFG_REGS 0x40010000
+        #define COMP_REGS 0x4001001C
+        #define OPAMP_REGS 0x40010038
+
     #define EXTI_REGS   0x40010400
     #define TIM1_REGS   0x40012C00
     #define SPI1_REGS   0x40013000
@@ -180,6 +183,29 @@ typedef struct
     //continues....
 } SCS_map;
 #define SCB ((SCS_map *) CORTEXT_SCB_BASE)
+
+//SYSCFG_REGS (SYSCFG, COMP, OPAMP)
+
+typedef struct
+{
+    volatile uint32_t CFGR1;
+    //...
+} SYSCFG_map;
+#define SYSCFG ((SYSCFG_map *) SYSCFG_REGS)
+
+
+typedef struct
+{
+    volatile uint32_t COMP1_CSR;
+    volatile uint32_t COMP2_CSR;
+    volatile uint32_t COMP3_CSR;
+    volatile uint32_t COMP4_CSR;
+    volatile uint32_t COMP5_CSR;
+    volatile uint32_t COMP6_CSR;
+    volatile uint32_t COMP7_CSR;
+    //...
+} COMP_map;
+#define COMP ((COMP_map *) COMP_REGS)
 
 
 // TIMERS
@@ -369,6 +395,25 @@ typedef struct
 
 extern volatile ADC_common_map * const ADC_common[5];    //needs to be initialized
 
+typedef struct
+{
+    volatile uint32_t   CR;             //0x00
+    volatile uint32_t   SWTRIGR;
+    volatile uint32_t   DHR12R1;
+    volatile uint32_t   DHR12L1;
+    volatile uint32_t   DHR8R1;         //0x10
+    volatile uint32_t   DHR12R2;
+    volatile uint32_t   DHR12L2;
+    volatile uint32_t   DHR8R2;
+    volatile uint32_t   DHR12RD;        //0x20
+    volatile uint32_t   DHR12LD;
+    volatile uint32_t   DHR8RD;
+    volatile uint32_t   DOR1;
+    volatile uint32_t   DOR2;           //0x30
+    volatile uint32_t   SR;
+} DAC_map;
+#define DAC ((DAC_map *) DAC_REGS)
+
 
 typedef struct
 {
@@ -386,6 +431,12 @@ typedef struct
 } GPIO_map;
 #define GPIOA ((GPIO_map *) GPIOA_REGS)
 #define GPIOB ((GPIO_map *) GPIOB_REGS)
+#define GPIOC ((GPIO_map *) GPIOC_REGS)
+#define GPIOD ((GPIO_map *) GPIOD_REGS)
+#define GPIOE ((GPIO_map *) GPIOE_REGS)
+#define GPIOF ((GPIO_map *) GPIOF_REGS)
+#define GPIOG ((GPIO_map *) GPIOG_REGS)
+#define GPIOH ((GPIO_map *) GPIOH_REGS)
 
 //RCC = reset and clock control
 typedef struct

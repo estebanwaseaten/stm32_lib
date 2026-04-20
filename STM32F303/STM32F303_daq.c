@@ -16,12 +16,14 @@ bool     gTriggerHappened;      //
 uint32_t gLastTriggerEvent;		// record DMA pos of last trigger event. Check if there is enough datapoints after 1/2- and 1-DMA interrupt
 bool     gRequestArmWatchdog;   //not needed soon ()
 
+// these values are changed by call to DAQ_config_DataBuffer()
 uint32_t gDataBufferLength;
 uint32_t gDataLength;			// --> circular buffer 200
 uint32_t gHalfDataLength;
 
 // could create a settings struct?
 //settings to be set via cmds
+bool gDAQ12_is_running;
 uint32_t g_settings_triggerMode;		// 0 --> software, 1, 2, 3 or 4 hardware
 uint32_t g_settings_triggerLevel;
 uint32_t g_settings_triggerPos;
@@ -35,8 +37,9 @@ uint32_t g_settings_adc_time;			// 000 = 1.5 cycles to 111 = 601,5 cycles per AD
 uint32_t g_settings_acquisition_speed;	// how many datapoints per second (defines timer settings)
 uint32_t g_settings_enabledChannels;
 
-uint32_t gSetArrCounter;
-uint32_t gARR;
+// save?
+uint8_t gTimebaseExponent;
+uint8_t gTimebaseFactor;
 
 
 volatile uint32_t gDataReady;	          //binary encoding 0b1111 for all four channels, 0b0001 for channel 1
@@ -51,10 +54,113 @@ volatile uint32_t gDataCounter;			//start with 0 and count up to gDataTransferSi
 volatile uint32_t gDatapointsAcquired;
 
 
+void myDMA1_handler( void );
+void myDMA2_handler( void );
+void myADC_watchdog_handler( void );    //shall be removed
+
+void myTIM2_handler( void );        // stops or pauses TIM2 --> ends DAQ in hardware triggered scheme
+
+void myEXTI_handler( void );        // called after trigger event --> immediately starts TIM3
+
+//		correct order
+// 1. DMA config (NOT ENABLE!)
+// 2. ADC config mit DMAEN  --> DMA will be used to store results
+// 3. DMA enable            --> ADC + DMA setup is done.
+
+// 4. TIM2 configuration    --> TIM2 will trigger ADC data acquisition
+
+//for hardware trigger:
+// 5. DAC to set reference level for comparator
+// 6. COMP + EXTI to catch rising or falling edge triggers
+// 7. TIM3 to count down ADC conversions after trigger has fired --> g_settings_triggerPosRemaining to zero --> interrupt to stop ADC and wait for readout of data or restart
+
+//clocks need to be enabled first
+void DAQ12_init( void )
+{
+    gDAQ12_is_running = false;
+
+    //should set to 1 ms
+    gTimebaseExponent = 1;
+    gTimebaseFactor = 1;
+	//default starting values:
+	//gHardwareTrigger = false;
+    gRequestArmWatchdog = false;
+	gTriggerHappened = false;
+	gLastTriggerEvent = 0;				// record DMA pos of last trigger event. Check if there is enough datapoints after 1/2- and 1-DMA interrupt
+	gCurrentFetchChannel = 0;
+
+
+	/* enable interrup handlers for
+ 	 *		- DMA transfers (to check if we acquired enough datapoints after trigger event or in general)
+	 *		- ADC watchdog (to)
+	 */
+	setHandler_DMA( 1, 1, myDMA1_handler );
+
+	//setHandler_DMA( 2, ..., myDMA2_handler );
+    //setHandler_ADC( 1, myADC_watchdog_handler );	// handler for ADC1
+    //setHandler_ADC( 2, myADC_watchdog_handler );	// handler for ADC2
+    //setHandler_ADC( 3, myADC_watchdog_handler );	// handler for ADC3
+    //setHandler_ADC( 4, myADC_watchdog_handler );	// handler for ADC4
+
+    setHandler_TIM2( myTIM2_handler );		        //this timer will be counting "after trigger event" --> the handler will pause/stop acquisition
+
+    //setHandler_EXTI( );
+
+    //start all the peripheral clocks:
+	DMA_start_clock( true, true );             //init both DMA channels
+
+    ADC_start_clock( 1 );
+    ADC_start_clock( 2 );
+
+    DAC_start_clock( 1 );     // DAC1_CH1/PA4 can be used for all the comparators
+
+    COMP_start_clock();
+
+    TIMER_start_clock( 2, true );		//init timer 2 with PLL
+    TIMER_start_clock( 3, true );		//init timer 3 with PLL  (with PLL?)
+
+    // switch on voltage regulators:
+    ADC_init( 1 );
+    ADC_init( 2 );
+    //ADC_init( 3 );
+    //ADC_init( 4 );
+
+
+    //DMA setup:
+	DMA_setup_peri( 1, 1, &ADC1_2_COMMON->CDR, (uint32_t*)0x20000004, 32, true, gDataBufferLength );
+
+    //ADC setup
+	ADC12_setup_dual();
+
+    //DAC & COMP setup for HW triggering:
+    DAC_enable( 1 );
+    DAC_set( 2048 );
+
+    //TIMER setup
+    //default config:
+    DAQ_config_dataBuffer( 500, false );	//no dma reset here
+    DAQ_config_timebase( 0x11 );    // 0b00010001 exp and factor = 1
+	DAQ_config_trigger_mode( TRIG_SOFTWARE );
+	DAQ_config_trigger_level( 0x4FF );
+	DAQ_config_trigger_pos( 2000 );
+
+    //TIMER2_setup( gARR );	         //1 us between each acquisition --> 8000 acquisitions in 8ms
+    //TIMER3_setup( gDataLength );     // ARR value can always be gDataLength (we have saved 2 x gDataLength, so we can freely pick)...
+    // this means the trigger always happened gDataLength points before the TIM3 interrupt fires
+
+    // AFTER configuring ADC we can enable DMA otherwise there is a problem
+    DMA_enable_interrupt( 1, 1 );		//one interrupt per ADC dual pair
+	DMA_enable( 1, 1 );
+	//	DMA_enable( 2, 1 );	not needed in dual mode
+
+    //start DAQ (enables timer 2)
+//	DAQ12_start();
+}
+
+
 //handlers:
 // DMA1 and DMA2
 // ADC watchdog (for triggering)
-
 
 /********* DAQ interrupt handlers *********/
 // called at 1/2 and full circular buffer --> opportunity to check if we have enough datapoints after trigger
@@ -67,25 +173,9 @@ void myDMA1_handler( void )
 
         if( g_settings_triggerMode != TRIG_SOFTWARE )
         {
-            //currentDMApos = DMA_get_pos( 1, 1 );  --> current DMA position must be 1/2 total, so memory index is at gDataBufferLength/2 = gDataLength
-            //check if enough datatpoints after trigger
-            if( gLastTriggerEvent <= gDataLength )
-            {
-                if( (gDataLength - gLastTriggerEvent) >= g_settings_triggerPosRemaining )
-                {
-                    DAQ12_stop();
-                    gDataReady = g_settings_enabledChannels;
-                    gDataStart = gLastTriggerEvent;
-                    setWord( 0x20009028, getWord( 0x20009028 ) + 1 );
-                }
-            }
-            else    //the trigger happened at least one gDataLength before anyways!! (could be buggy if  the postion was exactly at 1/2?)
-            {
-                DAQ12_stop();
-                gDataReady = g_settings_enabledChannels;
-                gDataStart = gLastTriggerEvent;
-                setWord( 0x20009028, getWord( 0x20009028 ) + 1 );
-            }
+            //hardware triggering:
+
+
         }
 	}
 
@@ -99,32 +189,45 @@ void myDMA1_handler( void )
 		}
         else
         {
-            //currentDMApos = DMA_get_pos( 1, 1 );  --> current DMA position must be zero, so memory index is at gDataBufferLength
-            //check if enough datatpoints after trigger = check if we are at least g_settings_triggerPosRemaining behind gLastTriggerEvent
-            if( (gDataBufferLength - gLastTriggerEvent) >= g_settings_triggerPosRemaining ) //-->done
-            {
-                DAQ12_stop();
-                gDataReady = g_settings_enabledChannels;     //need channels here!
-                gDataStart = gLastTriggerEvent;
-                setWord( 0x20009028, getWord( 0x20009028 ) + 1 );
-            }
+            //hardware triggering:
+
 
         }
 	}
 	DMA_clear_interrupts( 1 );
-
-    //if trigger mode changed we can turn on the watchdog now (after at least a half filled buffer)
-    if( gRequestArmWatchdog )
-    {
-        ADC1_watchdog_arm();
-        gRequestArmWatchdog = false;
-    }
 }
 
 void myDMA2_handler( void )		//needed? later maybe
 {
 	//setWord( 0x20009038, getWord( 0x20009038 ) + 1 );
 }
+
+
+// hardware trigger event happened DAC+COMP1-->EXTI--> hander: starts TIM3
+void myEXTI_handler( void ) //NOT NEEDED CURRENTLY
+{
+    //TIM3 should be configured
+    //1. start TIM3
+
+    //2. delete EXTI flag?      EXTI->PR = EXTI_PR_PR_Pos; // Flag löschen
+}
+
+// STOPS data acquisition in hardware trigger mode:
+// shall be triggered after a hardware trigger event + x ADC cycles.
+// this timer will be counting "after trigger event" --> the handler will pause/stop acquisition
+void myTIM2_handler( void )
+{
+    // stop TIM2
+    TIMER3_stop();      //Immediately stop TIM3 (CEN=0) or clear EXTEN=0.
+
+    TIMER2_interrupt_clear();       //needs to be a fast function
+    TIMER2_disable();         // so we dont re-trigger...
+    //reset TIMER3 counter...
+
+
+    setWord( 0x20009004, getWord( 0x20009004 ) + 1 );
+}
+
 
 
 //thrown at hardware trigger event
@@ -151,6 +254,9 @@ void DAQ_currentFetchDone( void )
 	gDataCounter = 0;
 	gDataIndex = 0;
 	CLRBIT( gDataReady, gCurrentFetchChannel - 1 );
+
+    //for hardware triggering we should probably reset the DMA and disarm the TIM3 (until enough data is acquired)?
+    //does this depend if there are more than 1 channels to fetch?
 }
 
 void DAQ_prepFetch( uint32_t channel )		//if
@@ -193,8 +299,6 @@ uint32_t isDataAvailable( void )
 	return gDataReady;
 }
 
-
-
 /********* DAQ triggering *********/
 inline void setLastTriggerEvent( uint32_t dmaPos )
 {
@@ -208,67 +312,6 @@ inline uint32_t getLastTriggerEvent( void )
 
 
 
-//		correct order
-// 1. DMA config (NOT ENABLE!)
-// 2. ADC config mit DMAEN
-// 3. DMA enable
-// 4. TIM2 configuration
-//clocks need to be enabled before
-void DAQ12_setup( void )
-{
-	//default starting values:
-	//gHardwareTrigger = false;
-    gRequestArmWatchdog = false;
-	gTriggerHappened = false;
-	gLastTriggerEvent = 0;				// record DMA pos of last trigger event. Check if there is enough datapoints after 1/2- and 1-DMA interrupt
-	gCurrentFetchChannel = 0;
-
-	DAQ_config_DataBuffer( g_settings_datapoints, false );	//no dma reset here
-
-	gSetArrCounter = 0;
-	gARR = 143;	//1us period
-
-	/* enable interrup handlers for
- 	 *		- DMA transfers (to check if we acquired enough datapoints after trigger event or in general)
-	 *		- ADC watchdog (to)
-	 */
-	setHandler_DMA( 1, 1, myDMA1_handler );
-	//setHandler_DMA( 2, ..., myDMA2_handler );
-	setHandler_ADC( 1, myADC_watchdog_handler );	// handler for ADC1
-	setHandler_ADC( 2, myADC_watchdog_handler );	// handler for ADC2
-	setHandler_ADC( 3, myADC_watchdog_handler );	// handler for ADC3
-	setHandler_ADC( 4, myADC_watchdog_handler );	// handler for ADC4
-
-    //clocks and very general initialisation
-	DMA_init( true, true );             //init both DMA channels
-
-	ADC_init( 1 );			   // enables clocks and voltage regulator and does calibration
-	ADC_init( 2 );
-    //ADC_init( 3 );
-    //ADC_init( 4 );
-
-	TIMER_init( 2, true );		//init timer 2 with PLL
-
-    //DMA circular or cont	--> depends on HW or SW Trigger
-
-    //DMA setup:	(uses gDataLength)
-    //DMA_setup( true );             //specific for this DAQ (should probaly map the ADC to channel and memory...)
-	DMA_setup_peri( 1, 1, &ADC1_2_COMMON->CDR, (uint32_t*)0x20000004, 32, true, gDataBufferLength );
-    //ADC setup:
-    //ADC_setup( 0x3 );             //enables DMA and only afterwards DMA can be enabled
-	ADC12_setup_dual();
-
-	TIMER2_setup( gARR );	     //1 us between each acquisition --> 8000 acquisitions in 8ms
-
-    // AFTER configuring ADC we can enable DMA otherwise there is a problem
-		// do we need to enable more than one interrupt?
-    DMA_enable_interrupt( 1, 1 );		//one interrupt per ADC dual pair
-	DMA_enable( 1, 1 );
-		//	DMA_enable( 2, 1 );	not needed in dual mode
-
-	DAQ12_start();
-}
-
 
 /* Functions that start/stop/pause the DAQ
  */
@@ -279,6 +322,7 @@ void DAQ12_setup( void )
 // ADC1->DMA1CH1, (ADC2->DMA2CH1), ADC3->DMA2CH5, (ADC4->DMA2CH2) dual mode only uses the ADC-master DMA channels
 void DAQ12_start( void )
 {
+    gDAQ12_is_running = true;
     //reload DMA:
     DMA_reset( 1, 1 );     //reset DMA (especially the counter CNDTR)
 	//DMA_reset( 2, 1 ); DMA2,1 is not used in DUAL mode
@@ -294,18 +338,18 @@ void DAQ12_start( void )
 //after trigger event when the measuremen is done. stop timer:
 void DAQ12_pause( void )
 {
-	TIMER2_stop();
+    TIMER3_stop();
 }
 
 //after data is read and resume command is issued. restart timer:
 void DAQ12_resume( void )
 {
-	TIMER2_start();
+    TIMER3_start();
 }
 
 void DAQ12_stop( void )
 {
-    TIMER2_stop();       //CLRBIT( TIM2->CR1, 0 );
+    TIMER3_stop();       //CLRBIT( TIM2->CR1, 0 );
 
     //stop ADC:
     SETBIT( ADC[1]->CR, 4 );       //ADSTP = 1
@@ -321,6 +365,8 @@ void DAQ12_stop( void )
         __asm("nop");
     }
 	SETBIT( ADC[2]->ISR, 4 );
+
+    gDAQ12_is_running = false;
 
     //TCIF löschen
     //SETWRD( DMA1->IFCR, 0xFFFFFFFF );
@@ -407,8 +453,67 @@ bool DAQ_config_trigger_risingEdge_get( void )
     return g_settings_triggerRisingEdge;
 }
 
+// first 4 bits of timebase indicate factor,
+// second 4 bits of timebase indicate exponent: factor * 10^exponent
+// factor: 0,1 ... 1 (really the minimum is 0,2us here)
+// exponent 0 ... 15 (really the maximum should be in the lower ms range)
+// MAXVALIDDATAPTS is 4000 --> 2,5ms would result in a 10s measurement time for the whole trace
+void DAQ_config_timebase( uint8_t timebase )
+{
+    // 0beeeeffff
+    uint8_t factor = timebase & 0xF;
+    uint8_t exponent = (timebase >> 4) & 0xF;
 
-void DAQ_config_ARR( uint8_t arrByte )		//set counter byte by byte
+    if( factor < 1 )
+    { factor = 1; }             // --> 0.1 * 10^exponent
+    else if( factor > 10 )
+    { factor = 10; }            // --> 1 * 10^exponent
+
+    if( exponent > 8 )
+    { exponent = 8; }   //prevent enormous measurement times
+
+    uint32_t clk = TIMER2_getClockHz();
+
+    // tb < 1 ms --> prescaler = 0
+    // tb >= 1ms --> prescaler = 72
+    // TIM2 --> counts remaining datapoints after hardware trigger
+    // TIM3 --> counts between ADC cycles
+
+    uint32_t arr_tim2;
+    uint32_t arr_tim3;
+    uint32_t prescaler;
+    if( exponent == 0 ) //--> < 1ms
+    {
+        //calc arr and set
+        prescaler = 0;
+
+    }
+    else
+    {
+        //set prescalers to clk-1
+        prescaler = clk - 1;
+        arr_tim3 = (factor * 10^( exponent - 1)) - 1;   //counts to arr+1
+        arr_tim2 = arr_tim3 * g_settings_datapoints;
+    }
+
+    //only stop if it was running?
+    DAQ12_stop();
+
+    TIMER2_setup( arr_tim2, prescaler );
+    //TIMER2_interrupt_enable();
+    TIMER3_setup( arr_tim3, prescaler );
+
+    //only start if it was running before?
+    DAQ12_start();
+}
+
+uint8_t DAQ_config_timebase_get( void )
+{
+    return ((gTimebaseExponent << 4) & 0xF0) | (gTimebaseFactor & 0xF );
+}
+
+//also updates TIMER3  --- deprecated
+/*void DAQ_config_ARR( uint8_t arrByte )		//set counter byte by byte
 {
 	uint32_t arr = arrByte;
 	DAQ12_stop();
@@ -432,7 +537,19 @@ void DAQ_config_ARR( uint8_t arrByte )		//set counter byte by byte
 		case 3:
 			gARR |= (arr & 0x000000FF);
 			ADC12_maximize_sampling_time( gARR, TIMER2_getClockHz() );
+
 			TIMER2_setup( gARR );
+            //TIMER3 only has 16 bits. need to use the prescaler if above.
+            //TIMER3 prescaler is set to the amount of datapoints --> counts to the end of the data
+            //need to double check -1!
+            if( gArr < 65535 )
+            {
+                TIMER3_setup( gARR, dataPoints );
+            }
+            else
+            {
+                TIMER3_setup( gARR/10, 10*dataPoints );
+            }
 			setWord( 0x20009020, gARR );
 			DAQ12_start();
 			gSetArrCounter = 0;
@@ -442,9 +559,9 @@ void DAQ_config_ARR( uint8_t arrByte )		//set counter byte by byte
 			gSetArrCounter = 0;
 			break;
 	}
-}
+}*/
 
-uint32_t DAQ_config_DataBuffer( uint32_t dataPoints, bool dmaReset )		//half the data size --> guarantees multiple of 4
+uint32_t DAQ_config_dataBuffer( uint32_t dataPoints, bool dmaReset )		//half the data size --> guarantees multiple of 4
 {
 	if( CHKBIT( dataPoints, 0 ) )	//odd --> add one --> even
 		dataPoints++;

@@ -19,7 +19,7 @@ uint8_t kSPIbitsPerWord[5] = {0, };     //in bss section, wont be initialize if 
  *
  */
 
-int SPI_init( uint32_t SPInum )         //enables BUS clock
+int SPI_start_clock( uint32_t SPInum )         //enables BUS clock
 {
     switch( SPInum )
     {
