@@ -76,7 +76,7 @@
     #define GPIOH_REGS  0x48001C00
 
 #define AHB3_BASE 0x50000000                    //AHB3 0x5000 0000 - 0x5000 07FF
-    #define ADC1_REGS           0x50000000
+    #define ADC1_REGS           0x50000000 
     #define ADC2_REGS           0x50000100
     #define ADC1_2_COMMON_REGS   0x50000300
 
@@ -146,11 +146,11 @@ typedef struct
 {
     volatile uint32_t   BANK[8];  //
 } IRQ_map;
-#define NVIC_ISER ((IRQ_map *) CORTEX_NVIC_ISER)
-#define NVIC_ICER ((IRQ_map *) CORTEX_NVIC_ICER)
-#define NVIC_ISPR ((IRQ_map *) CORTEX_NVIC_ISPR)
-#define NVIC_ICPR ((IRQ_map *) CORTEX_NVIC_ICPR)
-#define NVIC_IABR ((IRQ_map *) CORTEX_NVIC_IABR)
+#define NVIC_ISER ((volatile IRQ_map *) CORTEX_NVIC_ISER)
+#define NVIC_ICER ((volatile IRQ_map *) CORTEX_NVIC_ICER)
+#define NVIC_ISPR ((volatile IRQ_map *) CORTEX_NVIC_ISPR)
+#define NVIC_ICPR ((volatile IRQ_map *) CORTEX_NVIC_ICPR)
+#define NVIC_IABR ((volatile IRQ_map *) CORTEX_NVIC_IABR)
 
 typedef struct
 {
@@ -196,16 +196,11 @@ typedef struct
 
 typedef struct
 {
-    volatile uint32_t COMP1_CSR;
-    volatile uint32_t COMP2_CSR;
-    volatile uint32_t COMP3_CSR;
-    volatile uint32_t COMP4_CSR;
-    volatile uint32_t COMP5_CSR;
-    volatile uint32_t COMP6_CSR;
-    volatile uint32_t COMP7_CSR;
+    volatile uint32_t CSR;
     //...
 } COMP_map;
 #define COMP ((COMP_map *) COMP_REGS)
+
 
 
 // TIMERS

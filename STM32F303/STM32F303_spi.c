@@ -13,6 +13,13 @@ volatile SPI_map * const SPI[5] = {
 
 uint8_t kSPIbitsPerWord[5] = {0, };     //in bss section, wont be initialize if the reset handler does not do it
 
+#define SPI_PIN_CLK 3
+#define SPI_PIN_MISO 4
+#define SPI_PIN_MOSI 5
+#define SPI_BANK_CLK GPIO_BANK_B
+#define SPI_BANK_MISO GPIO_BANK_B
+#define SPI_BANK_MOSI GPIO_BANK_B
+
 
 /************** SPI functions
  *  //interrupts
@@ -64,29 +71,41 @@ int SPI_start_clock( uint32_t SPInum )         //enables BUS clock
 int SPI_enable( uint32_t SPInum, uint8_t bitsPerWord )
 {   // possible mappings found in datasheet
     //setup pins:
-    CLRBITS( GPIOA->MODER, 0x3, 5*2 );      //clear function
-    CLRBITS( GPIOA->MODER, 0x3, 6*2 );      //clear function
-    CLRBITS( GPIOA->MODER, 0x3, 7*2 );      //clear function
 
-    SETBITS( GPIOA->MODER, 0x2, 5*2 );      //pin 5 alternate function
-    SETBITS( GPIOA->MODER, 0x2, 6*2 );      //pin 6 alternate function
-    SETBITS( GPIOA->MODER, 0x2, 7*2 );      //pin 7 alternate function
+    GPIO_changeFunction( SPI_BANK_CLK, SPI_PIN_CLK, GPIO_MODE_ALT );
+    GPIO_changeFunction( SPI_BANK_MOSI, SPI_PIN_MOSI, GPIO_MODE_ALT );
+    GPIO_changeFunction( SPI_BANK_MISO, SPI_PIN_MISO, GPIO_MODE_ALT );
+
+    //CLRBITS( GPIOA->MODER, 0x3, 5*2 );      //clear function
+    //CLRBITS( GPIOA->MODER, 0x3, 6*2 );      //clear function
+    //CLRBITS( GPIOA->MODER, 0x3, 7*2 );      //clear function
+    //SETBITS( GPIOA->MODER, 0x2, 5*2 );      //pin 5 alternate function
+    //SETBITS( GPIOA->MODER, 0x2, 6*2 );      //pin 6 alternate function
+    //SETBITS( GPIOA->MODER, 0x2, 7*2 );      //pin 7 alternate function
 
     // speed GPIOA->OSPEEDR: 11 (high speed) OUTPUT!!!
-    CLRBIT( GPIOA->OTYPER, 5 );
-    CLRBIT( GPIOA->OTYPER, 6 );
-    CLRBIT( GPIOA->OTYPER, 7 );
-    SETBITS( GPIOA->OSPEEDR, 0x3, 6*2 );    // MISO -> output
-    CLRBITS( GPIOA->PUPDR, 0x3, 6*2 );
+    GPIO_changeOutputType( SPI_BANK_CLK, SPI_PIN_CLK, GPIO_OTYPE_PUSHPULL );
+    GPIO_changeOutputType( SPI_BANK_MOSI, SPI_PIN_MOSI, GPIO_OTYPE_PUSHPULL );
+    GPIO_changeOutputType( SPI_BANK_MISO, SPI_PIN_MISO, GPIO_OTYPE_PUSHPULL );
+    //CLRBIT( GPIOA->OTYPER, 5 );
+    //CLRBIT( GPIOA->OTYPER, 6 );
+    //CLRBIT( GPIOA->OTYPER, 7 );
+    GPIO_changeOutputSpeed( SPI_BANK_MISO, SPI_PIN_MISO, GPIO_SPEED_HIGH );
+    GPIO_changePull( SPI_BANK_MISO, SPI_PIN_MISO, GPIO_PULL_NONE );
+    //SETBITS( GPIOA->OSPEEDR, 0x3, 6*2 );    // MISO -> output
+    //CLRBITS( GPIOA->PUPDR, 0x3, 6*2 );
 
     //alternate function select: PA4, 5, 6 and 7: AF5 = 0101
-    CLRBITS( GPIOA->AFRL, 0xF, 5*4 );
-    CLRBITS( GPIOA->AFRL, 0xF, 6*4 );
-    CLRBITS( GPIOA->AFRL, 0xF, 7*4 );
+    GPIO_altFunc( SPI_BANK_CLK, SPI_PIN_CLK, GPIO_ALT5 );
+    GPIO_altFunc( SPI_BANK_MISO, SPI_PIN_MISO, GPIO_ALT5 );
+    GPIO_altFunc( SPI_BANK_MOSI, SPI_PIN_MOSI, GPIO_ALT5 );
+    //CLRBITS( GPIOA->AFRL, 0xF, 5*4 );
+    //CLRBITS( GPIOA->AFRL, 0xF, 6*4 );
+    //CLRBITS( GPIOA->AFRL, 0xF, 7*4 );
 
-    SETBITS( GPIOA->AFRL, 0x5, 5*4 );
-    SETBITS( GPIOA->AFRL, 0x5, 6*4 );
-    SETBITS( GPIOA->AFRL, 0x5, 7*4 );
+    //SETBITS( GPIOA->AFRL, 0x5, 5*4 );
+    //SETBITS( GPIOA->AFRL, 0x5, 6*4 );
+    //SETBITS( GPIOA->AFRL, 0x5, 7*4 );
 
     //could enable cyclic redundancy check (CRC):
     //SETBIT( SPI1->CR1, 13 );

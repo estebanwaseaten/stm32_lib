@@ -70,7 +70,7 @@ void DMA_setup_peri( uint32_t dma, uint32_t chan, volatile uint32_t *sourceAddr,
     //(uint32_t)&ADC1->DR );                    //SOURCE: peripheral address
 
     SETWRD( currentDMA->CH[chan].CMAR, (uint32_t)destAddr );                      //DESTINATION: memory start address
-    SETWRD( currentDMA->CH[chan].CNDTR, bufferLength );                  //number of data transfers
+    SETWRD( currentDMA->CH[chan].CNDTR, bufferLength );                           //number of data transfers
 }
 
 void DMA_reset( uint32_t DMAnum, uint32_t dma_channel )

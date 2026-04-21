@@ -70,12 +70,6 @@ void ADC_init( uint32_t ADCnum )
     waitCycles(4);
 }
 
-void ADC_setup( uint32_t ADCnum )
-{
-
-}
-
-
 
 // ADC1 --> PA0 (ADC1_IN1)      (1-5 = fast channels)       // EXTSEL  = 1011 TIM2 reg          -- exists on nucleo board
 // ADC2 --> PA4 (ADC2_IN1)      (1-5 = fast channels)       // EXTEN/EXTSEL only in master      -- exists on nucleo board
@@ -115,11 +109,13 @@ void ADC12_setup_dual( void )   //pin select?
 
     //setup of triggering scheme and DMA --> only for master
     CLRWRD( ADC[1]->CFGR );
-    SETBIT( ADC[1]->CFGR, 10 );            //EXTEN -> hardware trigger detection on rising edge enabled
-    SETBITS( ADC[1]->CFGR, 0xB, 6 );       //EXTSEL = 0b1011 = 0xB TIM2_TRGO event triggers conversion!                 SELECT TIMER TIM2
+    SETBIT( ADC[1]->CFGR, 10 );            //EXTEN -> hardware trigger detection on rising edge enabled         // timer TIM3 triggers ADC
+    SETBITS( ADC[1]->CFGR, 0x4, 6 );       //EXTSEL = 0b1011 = 0xB TIM2_TRGO event triggers conversion!                 SELECT TIMER TIM2
+                                           // EXTSEL = 0b0100 = 0x4 TIM3_TRGO for ADC1/2
+                                           // for ADC3/4 ist 0b1011 = 0xB for TIM3_TRGO!!!
 
     SETBIT( ADC[1]->CFGR, 1 );             //DMACFG: 1: DMA Circular Mode selected  --> has to be set in COMMON->CCR for dual mode
-    //SETBIT( ADC[1]->CFGR, 13 );            //CONT set - not needed because TIM2 should do the triggering
+    //SETBIT( ADC[1]->CFGR, 13 );          //CONT set - not needed because TIM2 should do the triggering
 
     //single mode (ignored in dual mode):
     SETBIT( ADC[1]->CFGR, 0 );             // enable DMA - in dual ADC mode ADC[x]->CCR: MDMA bits are relevant         ENABLE DMA

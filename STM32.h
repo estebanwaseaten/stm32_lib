@@ -37,11 +37,42 @@ enum gpio_banks
     GPIO_BANK_H
 };
 
-// 0b00 input, 0b01 general purpose output, 0b10 alternate function, 0b11 analog mode
-#define GPIO_PIN_INPUT  0x0
-#define GPIO_PIN_OUTPUT 0x1
-#define GPIO_PIN_ALT    0x2
-#define GPIO_PIN_ANALOG 0x3
+
+#define GPIO_MODE_INPUT     0x0
+#define GPIO_MODE_OUTPUT    0x1
+#define GPIO_MODE_ALT       0x2
+#define GPIO_MODE_ANALOG    0x3
+
+#define GPIO_OTYPE_PUSHPULL     0x0
+#define GPIO_OTYPE_OPENDRAIN    0x1
+
+#define GPIO_SPEED_LOW      0x0
+#define GPIO_SPEED_MEDIUM   0x1
+#define GPIO_SPEED_HIGH     0x3
+
+#define GPIO_PULL_NONE  0x0
+#define GPIO_PULL_UP    0x1
+#define GPIO_PULL_DOWN  0x2
+
+enum alternateFunctions
+{
+    GPIO_ALT0,
+    GPIO_ALT1,
+    GPIO_ALT2,
+    GPIO_ALT3,
+    GPIO_ALT4,
+    GPIO_ALT5,
+    GPIO_ALT6,
+    GPIO_ALT7,
+    GPIO_ALT8,
+    GPIO_ALT9,
+    GPIO_ALT10,
+    GPIO_ALT11,
+    GPIO_ALT12,
+    GPIO_ALT13,
+    GPIO_ALT14,
+    GPIO_ALT15
+};
 
 //data acquisition (DAQ):
 #define CH1 0x1
@@ -69,12 +100,12 @@ enum trigger_modes
 #define SETBITS( reg, bits, shift ) ((reg) |= ((bits) << (shift)))
 #define SETWRD( reg, word ) ((reg) = (word))
 
-
 #define CLRBIT( reg, bit ) ((reg) &= ~(1U << (bit)))
 #define CLRBITS( reg, bits, shift ) ((reg) &= ~((bits) << (shift)))
 #define CLRWRD( reg ) ((reg) = 0x0)
 
 #define CHKBIT( reg, bit ) ((reg) & (1U <<(bit)))
+
 
 
 //MISC
@@ -129,19 +160,25 @@ void TIMER3_interrupt_clear( void );
 uint32_t TIMER3_getCountTo( void );
 uint32_t TIMER3_getPrescaler( void );
 
-// DAC
-void DAC_start_clock( uint32_t DACnum );
+// DAC1
+void DAC_start_clock( void );
 void DAC_enable( uint32_t channel );
-void DAC_set( uint16_t level );
-void DAC_disable( void );
+void DAC_set( uint32_t channel, uint16_t level );
+void DAC_disable( uint32_t channel );
 
 //COMP
 void COMP_start_clock( void );
+void COMP_select_output( uint32_t num, uint32_t out );
+void COMP_select_input( uint32_t num, uint32_t in );
 
 
 //GPIO
 void GPIO_start_clock( void );
 void GPIO_changeFunction( uint32_t bank, uint32_t pin, uint32_t function );
+void GPIO_changeOutputType( uint32_t bank, uint32_t pin, uint32_t type );
+void GPIO_changeOutputSpeed( uint32_t bank, uint32_t pin, uint32_t speed );
+void GPIO_changePull( uint32_t bank, uint32_t pin, uint32_t pull );
+void GPIO_altFunc( uint32_t bank, uint32_t pin, uint32_t function );
 
 void GPIO_set( uint32_t pin );
 void GPIO_unset( uint32_t pin );
@@ -198,16 +235,17 @@ uint16_t DMA_get_pos( uint32_t  DMAnum, uint32_t dma_channel );
 
 
 /********* DAQ subroutines *********/
-void DAQ12_init( void );
+void DAQ_init( void );
 
 //config
 void DAQ_config_timebase( uint8_t timebase );
-uint32_t DAQ_config_dataBuffer( uint32_t dataPoints, bool dmaReset );
-
+uint32_t DAQ_config_dataBuffer( uint32_t dataPoints );
 void DAQ_config_trigger_mode( uint16_t newMode );
 void DAQ_config_trigger_level( uint16_t newLevel );
 void DAQ_config_trigger_pos( uint16_t newPos );
 void DAQ_config_trigger_risingEdge( bool rising );
+
+void DAQ_config_update( void );    //stops, writes all the values and potentially starts again???
 
 uint8_t DAQ_config_timebase_get( void );
 uint16_t DAQ_config_trigger_mode_get( void );
@@ -215,7 +253,7 @@ uint16_t DAQ_config_trigger_level_get( void );
 uint16_t DAQ_config_trigger_pos_get( void );
 bool DAQ_config_trigger_risingEdge_get( void );
 
-void Interrupt_Enable( uint32_t irq );
+
 
 //DAQ flow control
 void DAQ12_pause( void );
@@ -226,6 +264,10 @@ void DAQ12_stop( void );
 // fetching data
 void DAQ_prepFetch( uint32_t channel );
 void DAQ_currentFetchDone( void );
+
+
+//interrupt stuff
+void Interrupt_Enable( uint32_t irq );
 
 // for setting custom handlers (implement as needed)
 typedef void (*isr_t)(void);
