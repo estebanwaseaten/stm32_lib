@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 
-
 void TIMER_start_clock( uint32_t tim, bool pllSrc )
 {                                          //1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16  17  18  19  20
     static const uint8_t clk_sel_bitmap[20] =      {8 , 24, 25, 25, 0 , 0 , 0 , 9 , 0 , 0 , 0 , 0 , 0 , 0 , 10, 11, 13, 0 , 0 , 15};
@@ -56,6 +55,13 @@ void TIMER2_setup( uint32_t arr, uint32_t prescaler  )    // timer is supposed t
 
     SETBITS( TIM2->CR2, 0x2, 4 );   //update event creates TRGO --> needed to trigger ADC & also secondary timer
     SETBIT( TIM2->CR1, 2 );         //only counter overflow/underflow generates an update
+
+
+    // trigger mode (0110), not external clock mode!!! because external clock is already configured above
+//    SETBITS( TIM3->SMCR, 0x6, 0 );  //SMS = 0110: trigger mode: The counter starts at a rising edge of the trigger TRGI (but it is not reset). Only the start of the counter is controlled.
+//    SETBIT( TIM3->CR1, 3 );         //One-pulse mode --< counter stops counting at next update event
+//    SETBIT( TIM3->DIER, 0 );        //Update interrupt enable
+
 }
 
 void TIMER2_interrupt( bool enable )
@@ -85,6 +91,19 @@ uint32_t TIMER2_getClockHz( void )
         return CLOCK_get_PCLK2();
     }
 }
+
+uint32_t TIMER3_getClockHz( void )
+{
+    if( CHKBIT( RCC->CFGR3, 25 ) ) //PLL
+    {
+        return 2 * CLOCK_get_pllClk(); //  timer clock rate by multiplied 2!!!
+    }
+    else
+    {
+        return CLOCK_get_PCLK2();
+    }
+}
+
 
 void TIMER2_start()
 {
@@ -140,14 +159,12 @@ void TIMER3_setup( uint32_t arr, uint32_t prescaler )
     SETWRD( TIM3->ARR, arr );       //how far to count? (minus 1)
     SETWRD( TIM3->PSC, prescaler );
 
-
-    // trigger mode (0110), not external clock mode!!! because external clock is already configured above
-    SETBITS( TIM3->SMCR, 0x6, 0 );  //SMS = 0110: trigger mode: The counter starts at a rising edge of the trigger TRGI (but it is not reset). Only the start of the counter is controlled.
-
-    SETBIT( TIM3->CR1, 3 );         //One-pulse mode --< counter stops counting at next update event
     SETBIT( TIM3->CR1, 2 );         //only counter overflow/underflow generates an update
-    SETBIT( TIM3->DIER, 0 );        //Update interrupt enable
+    SETBITS( TIM3->CR2, 0x2, 4 );   // update event creates TRGO --> needed to trigger ADC & also secondary timer
+
+
 }
+
 
 void TIMER3_enable( void )
 {
@@ -173,7 +190,7 @@ inline void TIMER3_stop()      //Immediately stop TIM2 (CEN=0) or clear EXTEN=0.
 
 inline void TIMER3_interrupt_enable()
 {
-    SETBIT( TIM2->DIER, 0 );                     //Update interrupt enabled.
+    SETBIT( TIM3->DIER, 0 );                     //Update interrupt enabled.
 }
 
 inline void TIMER3_interrupt_clear( void )      //

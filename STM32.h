@@ -135,6 +135,7 @@ uint32_t SYSTICK_get_ms();
 uint32_t SYSTICK_get_us();
 uint32_t SYSTICK_get_ticks_raw();
 
+
 //TIMERS
 void TIMER_start_clock( uint32_t tim, bool pllSrc );
 
@@ -159,6 +160,7 @@ void TIMER3_interrupt_enable( void );
 void TIMER3_interrupt_clear( void );
 uint32_t TIMER3_getCountTo( void );
 uint32_t TIMER3_getPrescaler( void );
+uint32_t TIMER3_getClockHz( void );
 
 // DAC1
 void DAC_start_clock( void );
@@ -184,6 +186,8 @@ void GPIO_set( uint32_t pin );
 void GPIO_unset( uint32_t pin );
 uint32_t GPIO_get( uint32_t pin );
 
+
+void ADC_debug(void);
 //ADC
 void ADC_start_clock( uint32_t ADCnum );
 void ADC_init( uint32_t ADCnum );
@@ -191,7 +195,7 @@ void ADC_init( uint32_t ADCnum );
 void ADC_setup( uint32_t ADCnum );
 void ADC12_setup_dual( void );
 uint32_t ADC12_getClockHz( void );
-uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t timClk );
+uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t prescaler, uint32_t timClk );
 void ADC_enable( uint32_t ADCnum, bool manual );
 void ADC_arm( uint32_t ADCnum );
 void ADC_disarm( uint32_t ADCnum );

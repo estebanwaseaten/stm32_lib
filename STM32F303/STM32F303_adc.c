@@ -26,7 +26,6 @@ volatile ADC_common_map * const ADC_common[5] = {
  * AHB3 should be clocked
  */
 
-
 void ADC_start_clock( uint32_t ADCnum )
 {
     //start ADC clocks
@@ -111,8 +110,8 @@ void ADC12_setup_dual( void )   //pin select?
     CLRWRD( ADC[1]->CFGR );
     SETBIT( ADC[1]->CFGR, 10 );            //EXTEN -> hardware trigger detection on rising edge enabled         // timer TIM3 triggers ADC
     SETBITS( ADC[1]->CFGR, 0x4, 6 );       //EXTSEL = 0b1011 = 0xB TIM2_TRGO event triggers conversion!                 SELECT TIMER TIM2
-                                           // EXTSEL = 0b0100 = 0x4 TIM3_TRGO for ADC1/2
-                                           // for ADC3/4 ist 0b1011 = 0xB for TIM3_TRGO!!!
+                                           //EXTSEL = 0b0100 = 0x4 TIM3_TRGO for ADC1/2
+                                           //for ADC3/4 ist 0b1011 = 0xB for TIM3_TRGO!!!
 
     SETBIT( ADC[1]->CFGR, 1 );             //DMACFG: 1: DMA Circular Mode selected  --> has to be set in COMMON->CCR for dual mode
     //SETBIT( ADC[1]->CFGR, 13 );          //CONT set - not needed because TIM2 should do the triggering
@@ -165,46 +164,50 @@ void ADC12_setup_dual( void )   //pin select?
     SETBITS( ADC[2]->SMPR1, 0x4, 3 );     //slower sample time for channel 1 (61.5 ADC clock cycles) --> should work for 1 per us
 }
 
-uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t timClk ) //needs timer value and timerSpeed
+uint32_t ADC12_maximize_sampling_time( uint32_t timArr, uint32_t prescaler, uint32_t timClk ) //needs timer value and timerSpeed
 {
     uint32_t adcClk = ADC12_getClockHz();
     uint32_t ratio = timClk/adcClk; // always2 ??   we count timArr and need to figure out how many adcClk cycles fit into that...
-    uint32_t cycles = ratio*(timClk * (timArr + 1u)) / (adcClk * 10u);
+    uint32_t cycles = ((timArr + 1u) * (prescaler + 1u))/ratio;
 
-    setWord( 0x20009030, cycles );
+    //cycles is the time between tow ADCs according to trigger
+
+    setWord( 0x20009020, timClk);
+    setWord( 0x20009024, adcClk );
+    setWord( 0x20009028, cycles );
 
     CLRWRD( ADC[1]->SMPR1 );              //fastest sample time
     CLRWRD( ADC[2]->SMPR1 );              //fastest sample time
     uint8_t value = 0;
-    if( cycles > 614 )
+    if( cycles >= 614 )
     {
         value = 0x7;
     }
-    else if( cycles > 194 )
+    else if( cycles >= 194 )
     {
         value = 0x6;
     }
-    else if( cycles > 74 )
+    else if( cycles >= 74 )
     {
         value = 0x5;
     }
-    else if( cycles > 32 )
+    else if( cycles >= 32 )
     {
         value = 0x4;
     }
-    else if( cycles > 20 )
+    else if( cycles >= 20 )
     {
         value = 0x3;
     }
-    else if( cycles > 17 )
+    else if( cycles >= 17 )
     {
         value = 0x2;
     }
-    else if( cycles > 15 )
+    else if( cycles >= 15 )
     {
         value = 0x1;
     }
-    else if( cycles > 14 )
+    else if( cycles >= 14 )
     {
         value = 0x0;
     }
